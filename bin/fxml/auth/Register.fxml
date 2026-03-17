@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="controller.auth.RegisterController"
+            prefWidth="900" prefHeight="680"
+            stylesheets="@../../css/main.css">
+
+    <HBox AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
+          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
+
+        <!-- ===== PANEL TRAI (Banner) ===== -->
+        <VBox styleClass="login-banner" alignment="CENTER" spacing="16"
+              prefWidth="380">
+            <padding><Insets top="60" bottom="60" left="40" right="40"/></padding>
+
+            <Label text="📝" styleClass="banner-icon"/>
+            <Label text="Tạo tài khoản mới" styleClass="banner-title"
+                   wrapText="true" textAlignment="CENTER"/>
+            <Label text="Đăng ký để sử dụng đầy đủ tính năng quản lý thời khóa biểu và điểm danh."
+                   styleClass="banner-subtitle" wrapText="true"
+                   textAlignment="CENTER"/>
+
+            <VBox spacing="12" alignment="CENTER_LEFT">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="✅" styleClass="check-icon"/>
+                    <Label text="Xem TKB theo ngày / tuần" styleClass="banner-subtitle"/>
+                </HBox>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="✅" styleClass="check-icon"/>
+                    <Label text="Điểm danh GPS và WiFi" styleClass="banner-subtitle"/>
+                </HBox>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="✅" styleClass="check-icon"/>
+                    <Label text="Thống kê chuyên cần" styleClass="banner-subtitle"/>
+                </HBox>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="✅" styleClass="check-icon"/>
+                    <Label text="Nhận thông báo tự động" styleClass="banner-subtitle"/>
+                </HBox>
+            </VBox>
+        </VBox>
+
+        <!-- ===== PANEL PHAI (Form) ===== -->
+        <ScrollPane fitToWidth="true" HBox.hgrow="ALWAYS"
+                    styleClass="scroll-transparent">
+            <VBox styleClass="auth-form-panel" alignment="TOP_LEFT" spacing="0">
+                <padding><Insets top="48" bottom="48" left="56" right="56"/></padding>
+
+                <!-- Header -->
+                <VBox spacing="4">
+                    <Label text="Đăng ký tài khoản" styleClass="form-title"/>
+                    <Label text="Điền đầy đủ thông tin bên dưới" styleClass="form-subtitle"/>
+                </VBox>
+
+                <Region prefHeight="24"/>
+
+                <!-- Role selector -->
+                <Label text="Loại tài khoản" styleClass="field-label"/>
+                <Region prefHeight="8"/>
+                <HBox spacing="12">
+                    <ToggleButton fx:id="btnRoleStudent" text="Sinh viên"
+                                  styleClass="role-toggle" selected="true"
+                                  toggleGroup="$roleGroup" prefWidth="160" prefHeight="40"
+                                  onAction="#onRoleChanged"/>
+                    <ToggleButton fx:id="btnRoleLecturer" text="Giảng viên"
+                                  styleClass="role-toggle"
+                                  toggleGroup="$roleGroup" prefWidth="160" prefHeight="40"
+                                  onAction="#onRoleChanged"/>
+                    <fx:define>
+                        <ToggleGroup fx:id="roleGroup"/>
+                    </fx:define>
+                </HBox>
+
+                <Region prefHeight="20"/>
+
+                <!-- Ho ten + MSSV/MaGV -->
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Họ và tên" styleClass="field-label"/>
+                        <TextField fx:id="txtFullName"
+                                   promptText="Nguyễn Văn A"
+                                   styleClass="auth-field" maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label fx:id="lblStudentId" text="MSSV" styleClass="field-label"/>
+                        <TextField fx:id="txtStudentId"
+                                   promptText="VD: 2151234567"
+                                   styleClass="auth-field" maxWidth="Infinity"/>
+                    </VBox>
+                </HBox>
+
+                <Region prefHeight="16"/>
+
+                <!-- Username + Email -->
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Tên đăng nhập" styleClass="field-label"/>
+                        <TextField fx:id="txtUsername"
+                                   promptText="Tên đăng nhập"
+                                   styleClass="auth-field" maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Email" styleClass="field-label"/>
+                        <TextField fx:id="txtEmail"
+                                   promptText="example@email.com"
+                                   styleClass="auth-field" maxWidth="Infinity"/>
+                    </VBox>
+                </HBox>
+
+                <Region prefHeight="16"/>
+
+                <!-- Password + Confirm -->
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Mật khẩu" styleClass="field-label"/>
+                        <PasswordField fx:id="txtPassword"
+                                       promptText="Tối thiểu 8 ký tự"
+                                       styleClass="auth-field" maxWidth="Infinity"/>
+                    </VBox>
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Xác nhận mật khẩu" styleClass="field-label"/>
+                        <PasswordField fx:id="txtConfirmPassword"
+                                       promptText="Nhập lại mật khẩu"
+                                       styleClass="auth-field" maxWidth="Infinity"/>
+                    </VBox>
+                </HBox>
+
+                <Region prefHeight="8"/>
+
+                <!-- Password strength bar -->
+                <HBox spacing="6">
+                    <Region fx:id="pwBar1" styleClass="pw-bar" prefHeight="4" HBox.hgrow="ALWAYS"/>
+                    <Region fx:id="pwBar2" styleClass="pw-bar" prefHeight="4" HBox.hgrow="ALWAYS"/>
+                    <Region fx:id="pwBar3" styleClass="pw-bar" prefHeight="4" HBox.hgrow="ALWAYS"/>
+                    <Region fx:id="pwBar4" styleClass="pw-bar" prefHeight="4" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <Label fx:id="lblPwStrength" text="" styleClass="pw-strength-label"/>
+
+                <Region prefHeight="16"/>
+
+                <!-- Error -->
+                <Label fx:id="lblError" text="" styleClass="error-label"
+                       wrapText="true" maxWidth="Infinity"/>
+
+                <Region prefHeight="8"/>
+
+                <!-- Submit -->
+                <Button fx:id="btnRegister" text="Tạo tài khoản"
+                        styleClass="btn-primary" maxWidth="Infinity"
+                        prefHeight="46" onAction="#handleRegister"/>
+
+                <Region prefHeight="16"/>
+
+                <!-- Login link -->
+                <HBox alignment="CENTER" spacing="6">
+                    <Label text="Đã có tài khoản?" styleClass="form-subtitle"/>
+                    <Hyperlink text="Đăng nhập" styleClass="link-text"
+                               onAction="#goToLogin"/>
+                </HBox>
+
+            </VBox>
+        </ScrollPane>
+    </HBox>
+</AnchorPane>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="controller.lecturer.LecturerDashboardController"
+            prefWidth="1100" prefHeight="680"
+            stylesheets="@../../css/main.css">
+
+    <!-- ===== SIDEBAR ===== -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="220" spacing="4">
+            <padding><Insets top="0" bottom="20" left="0" right="0"/></padding>
+
+            <VBox styleClass="sidebar-logo" alignment="CENTER">
+                <padding><Insets top="24" bottom="24"/></padding>
+                <Label text="🎓" style="-fx-font-size:32px;"/>
+                <Label text="AttendanceApp" styleClass="sidebar-app-name"/>
+            </VBox>
+
+            <VBox styleClass="sidebar-user" alignment="CENTER" spacing="4">
+                <padding><Insets top="12" bottom="16" left="16" right="16"/></padding>
+                <Label text="👨‍🏫" style="-fx-font-size:36px;"/>
+                <Label fx:id="lblUserName"  text="Giang Vien"     styleClass="sidebar-username"/>
+                <Label fx:id="lblUserCode"  text="Ma GV: GV001"   styleClass="sidebar-userid"/>
+                <Label text="Giảng viên" styleClass="role-badge-lecturer"/>
+            </VBox>
+
+            <Separator/>
+            <Region prefHeight="8"/>
+
+            <Button fx:id="btnDashboard" text="🏠  Tổng quan"
+                    styleClass="sidebar-btn,sidebar-btn-active"
+                    maxWidth="Infinity" onAction="#showDashboard"/>
+            <Button fx:id="btnSchedule"  text="📅  Quản lý TKB"
+                    styleClass="sidebar-btn" maxWidth="Infinity" onAction="#showSchedule"/>
+
+            <Separator/>
+            <Region prefHeight="4"/>
+
+            <Button fx:id="btnOpenSession" text="▶  Mở phiên điểm danh"
+                    styleClass="sidebar-btn" maxWidth="Infinity" onAction="#showOpenSession"/>
+            <Button fx:id="btnAttendanceList" text="📋  Danh sách điểm danh"
+                    styleClass="sidebar-btn" maxWidth="Infinity" onAction="#showAttendanceList"/>
+            <Button fx:id="btnStatistics"  text="📊  Thống kê chuyên cần"
+                    styleClass="sidebar-btn" maxWidth="Infinity" onAction="#showStatistics"/>
+            <Button fx:id="btnExport"      text="📥  Xuất danh sách"
+                    styleClass="sidebar-btn" maxWidth="Infinity" onAction="#showExport"/>
+
+            <Separator/>
+            <Region prefHeight="4"/>
+
+            <Button fx:id="btnChat"         text="💬  Chat lớp học"
+                    styleClass="sidebar-btn" maxWidth="Infinity" onAction="#showChat"/>
+            <Button fx:id="btnNotification" text="🔔  Thông báo"
+                    styleClass="sidebar-btn" maxWidth="Infinity" onAction="#showNotification"/>
+
+            <Region VBox.vgrow="ALWAYS"/>
+            <Separator/>
+            <Button text="🚪  Đăng xuất" styleClass="sidebar-btn,sidebar-btn-logout"
+                    maxWidth="Infinity" onAction="#handleLogout"/>
+        </VBox>
+    </left>
+
+    <!-- ===== NOI DUNG CHINH ===== -->
+    <center>
+        <VBox spacing="0">
+
+            <!-- Topbar -->
+            <HBox styleClass="topbar" alignment="CENTER_LEFT" spacing="16">
+                <padding><Insets top="16" bottom="16" left="24" right="24"/></padding>
+                <VBox spacing="2" HBox.hgrow="ALWAYS">
+                    <Label fx:id="lblPageTitle" text="Tổng quan" styleClass="page-title"/>
+                    <Label fx:id="lblPageDate"  text=""           styleClass="page-date"/>
+                </VBox>
+                <Button fx:id="btnQuickOpen" text="▶  Mở điểm danh nhanh"
+                        styleClass="btn-primary" onAction="#showOpenSession"/>
+            </HBox>
+
+            <StackPane fx:id="contentArea" VBox.vgrow="ALWAYS">
+
+                <!-- ===== TRANG TONG QUAN ===== -->
+                <ScrollPane fx:id="paneDashboard" fitToWidth="true"
+                            styleClass="scroll-transparent" visible="true" managed="true">
+                    <VBox spacing="20">
+                        <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
+
+                        <!-- Stats cards -->
+                        <HBox spacing="16">
+                            <VBox styleClass="stat-card,stat-card-blue" HBox.hgrow="ALWAYS" spacing="8">
+                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+                                <Label text="📚" styleClass="stat-card-icon"/>
+                                <Label fx:id="lblTotalSubjects" text="0" styleClass="stat-card-number"/>
+                                <Label text="Môn học đang dạy" styleClass="stat-card-label"/>
+                            </VBox>
+                            <VBox styleClass="stat-card,stat-card-green" HBox.hgrow="ALWAYS" spacing="8">
+                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+                                <Label text="👥" styleClass="stat-card-icon"/>
+                                <Label fx:id="lblTotalStudents" text="0" styleClass="stat-card-number"/>
+                                <Label text="Tổng sinh viên" styleClass="stat-card-label"/>
+                            </VBox>
+                            <VBox styleClass="stat-card,stat-card-amber" HBox.hgrow="ALWAYS" spacing="8">
+                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+                                <Label text="✅" styleClass="stat-card-icon"/>
+                                <Label fx:id="lblAvgAttendance" text="0%" styleClass="stat-card-number"/>
+                                <Label text="Tỉ lệ có mặt TB" styleClass="stat-card-label"/>
+                            </VBox>
+                            <VBox styleClass="stat-card,stat-card-red" HBox.hgrow="ALWAYS" spacing="8">
+                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+                                <Label text="⚠️" styleClass="stat-card-icon"/>
+                                <Label fx:id="lblAbsentWarning" text="0" styleClass="stat-card-number"/>
+                                <Label text="SV cảnh báo vắng" styleClass="stat-card-label"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- TKB hom nay + Phien dang mo -->
+                        <HBox spacing="16">
+
+                            <!-- TKB hom nay -->
+                            <VBox styleClass="dashboard-card" HBox.hgrow="ALWAYS" spacing="12">
+                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+                                <Label text="📅  Lịch dạy hôm nay" styleClass="card-title"/>
+                                <VBox fx:id="boxTodaySchedule" spacing="8"/>
+                                <Label fx:id="lblNoSchedule" text="Hôm nay không có lịch dạy"
+                                       styleClass="empty-label" visible="false" managed="false"/>
+                            </VBox>
+
+                            <!-- Phien diem danh dang mo -->
+                            <VBox styleClass="dashboard-card" prefWidth="340" spacing="12">
+                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+                                <Label text="▶  Phiên điểm danh đang mở" styleClass="card-title"/>
+                                <VBox fx:id="boxActiveSessions" spacing="8"/>
+                                <Label fx:id="lblNoSession" text="Không có phiên nào đang mở"
+                                       styleClass="empty-label"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- SV vang nhieu -->
+                        <VBox styleClass="dashboard-card" spacing="12">
+                            <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+                            <HBox alignment="CENTER_LEFT">
+                                <Label text="⚠️  Sinh viên vắng nhiều cần chú ý"
+                                       styleClass="card-title" HBox.hgrow="ALWAYS"/>
+                                <Hyperlink text="Xem tất cả" styleClass="link-text"
+                                           onAction="#showStatistics"/>
+                            </HBox>
+                            <VBox fx:id="boxAbsentWarning" spacing="0"/>
+                            <Label fx:id="lblNoWarning" text="Không có sinh viên nào vắng quá ngưỡng"
+                                   styleClass="empty-label"/>
+                        </VBox>
+
+                    </VBox>
+                </ScrollPane>
+
+                <!-- Coming soon pane -->
+                <Label fx:id="paneComingSoon" text="Tính năng đang phát triển..."
+                       styleClass="coming-soon-label" visible="false" managed="false"/>
+
+            </StackPane>
+        </VBox>
+    </center>
+
+</BorderPane>

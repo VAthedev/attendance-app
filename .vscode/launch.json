@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Main",
+      "request": "launch",
+      "mainClass": "client.Main",
+      "projectName": "attendance-app_92b3f3f6"
+    },
+    {
+      "type": "java",
+      "name": "Launch Client (JavaFX)",
+      "request": "launch",
+      "mainClass": "client.Main",
+      "projectName": "attendance-app",
+      "vmArgs": "--module-path ${workspaceFolder}\\lib\\javafx-sdk-21\\lib --add-modules javafx.controls,javafx.fxml"
+    }
+  ]
+}

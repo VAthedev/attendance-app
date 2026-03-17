@@ -1,0 +1,11 @@
+﻿{
+  "java.project.sourcePaths": ["src"],
+  "java.project.outputPath": "bin",
+  "java.project.referencedLibraries": [
+    "lib/**/*.jar",
+    "lib/javafx-sdk-21/lib/*.jar"
+  ],
+  "editor.tabSize": 4,
+  "editor.formatOnSave": true,
+  "files.encoding": "utf8"
+}
