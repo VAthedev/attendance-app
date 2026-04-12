@@ -11,6 +11,7 @@ import javafx.stage.Stage;
 import protocol.Request;
 import protocol.RequestType;
 import protocol.Response;
+import util.FxmlUtil;
 
 import java.net.URL;
 import java.util.HashMap;
@@ -122,7 +123,7 @@ public class RegisterController implements Initializable {
 
     private void loadScene(String fxmlPath, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            FXMLLoader loader = FxmlUtil.loader(fxmlPath);
             Stage stage = (Stage) btnRegister.getScene().getWindow();
             stage.setScene(new Scene(loader.load()));
             stage.setTitle(title);

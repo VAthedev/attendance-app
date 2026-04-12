@@ -10,19 +10,18 @@ import java.util.concurrent.Executors;
 
 public class Server {
 
-    private static final int    PORT        = 9999;
-    private static final int    MAX_CLIENTS = 50;
+    private static final int PORT = 9999;
+    private static final int MAX_CLIENTS = 50;
 
-    private ServerSocket        serverSocket;
-    private ExecutorService     threadPool;
-    private boolean             running = false;
+    private ServerSocket serverSocket;
+    private ExecutorService threadPool;
+    private boolean running = false;
 
     public Server() {
         threadPool = Executors.newFixedThreadPool(MAX_CLIENTS);
     }
 
     public void start() {
-        // Khoi tao DB truoc khi nhan ket noi
         try {
             DatabaseHelper.getInstance().getConnection();
         } catch (Exception e) {
@@ -32,15 +31,15 @@ public class Server {
 
         try {
             serverSocket = new ServerSocket(PORT);
-            running      = true;
+            running = true;
             System.out.println("[Server] Dang chay tren port " + PORT);
             System.out.println("[Server] Cho ket noi tu client...");
-
+            // vào vòng lặp chờ client kết nối
             while (running) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("[Server] Client ket noi: "
-                    + clientSocket.getInetAddress().getHostAddress());
-
+                        + clientSocket.getInetAddress().getHostAddress());
+                // Thread pool giúp server xử lý được nhiều client cùng lúc
                 ClientHandler handler = new ClientHandler(clientSocket);
                 threadPool.execute(handler);
             }
@@ -55,7 +54,8 @@ public class Server {
     public void stop() {
         running = false;
         try {
-            if (serverSocket != null) serverSocket.close();
+            if (serverSocket != null)
+                serverSocket.close();
             threadPool.shutdown();
             DatabaseHelper.getInstance().close();
             System.out.println("[Server] Da dung.");

@@ -8,6 +8,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import util.FxmlUtil;
 
 import java.net.URL;
 import java.time.LocalDate;
@@ -173,7 +174,7 @@ public class LecturerDashboardController implements Initializable {
             removeSubPane();
             paneDashboard.setVisible(false);  paneDashboard.setManaged(false);
             paneComingSoon.setVisible(false);  paneComingSoon.setManaged(false);
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            FXMLLoader loader = FxmlUtil.loader(fxmlPath);
             Node node = loader.load();
             contentArea.getChildren().add(node);
             currentSubPane = node;
@@ -201,7 +202,7 @@ public class LecturerDashboardController implements Initializable {
 
     private void loadScene(String fxmlPath, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            FXMLLoader loader = FxmlUtil.loader(fxmlPath);
             Stage stage = (Stage) btnDashboard.getScene().getWindow();
             stage.setScene(new Scene(loader.load()));
             stage.setTitle(title);

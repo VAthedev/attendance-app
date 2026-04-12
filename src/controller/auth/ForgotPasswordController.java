@@ -10,6 +10,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import util.FxmlUtil;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -186,7 +187,7 @@ public class ForgotPasswordController implements Initializable {
 
     private void loadScene(String fxmlPath, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            FXMLLoader loader = FxmlUtil.loader(fxmlPath);
             Stage stage = (Stage) btnSendOTP.getScene().getWindow();
             stage.setScene(new Scene(loader.load()));
             stage.setTitle(title);

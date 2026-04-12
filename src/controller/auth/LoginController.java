@@ -11,6 +11,7 @@ import protocol.Request;
 import protocol.RequestType;
 import protocol.Response;
 import security.SHA256Util;
+import util.FxmlUtil;
 
 import java.net.URL;
 import java.util.Map;
@@ -124,7 +125,7 @@ public class LoginController implements Initializable {
 
     private void loadScene(String fxmlPath, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            FXMLLoader loader = FxmlUtil.loader(fxmlPath);
             Stage stage = (Stage) btnLogin.getScene().getWindow();
             stage.setScene(new Scene(loader.load()));
             stage.setTitle(title);
