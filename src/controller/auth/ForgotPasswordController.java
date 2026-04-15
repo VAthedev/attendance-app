@@ -119,6 +119,14 @@ public class ForgotPasswordController implements Initializable {
         lblError2.setText("");
     }
 
+    @FXML
+    private void handleBackToEmail() {
+        stopCountdown();
+        clearOTPFields();
+        lblError2.setText("");
+        showStep(1);
+    }
+
     // ===== BUOC 3: DAT MAT KHAU MOI =====
     @FXML
     private void handleResetPassword() {
@@ -162,6 +170,15 @@ public class ForgotPasswordController implements Initializable {
                 if (nv.length() == 1 && nextField != null) nextField.requestFocus();
             });
         }
+    }
+
+    private void clearOTPFields() {
+        otp1.clear();
+        otp2.clear();
+        otp3.clear();
+        otp4.clear();
+        otp5.clear();
+        otp6.clear();
     }
 
     private void startCountdown() {
