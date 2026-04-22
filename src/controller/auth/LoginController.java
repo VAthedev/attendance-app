@@ -10,7 +10,6 @@ import javafx.stage.Stage;
 import protocol.Request;
 import protocol.RequestType;
 import protocol.Response;
-import security.SHA256Util;
 import util.FxmlUtil;
 
 import java.net.URL;
@@ -33,9 +32,26 @@ public class LoginController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        btnRoleStudent.setSelected(true);
-        btnRoleStudent.setOnAction(e -> { btnRoleStudent.setSelected(true);  btnRoleLecturer.setSelected(false); });
-        btnRoleLecturer.setOnAction(e -> { btnRoleLecturer.setSelected(true); btnRoleStudent.setSelected(false); });
+        if (roleGroup == null) {
+            roleGroup = new ToggleGroup();
+        }
+        btnRoleStudent.setToggleGroup(roleGroup);
+        btnRoleLecturer.setToggleGroup(roleGroup);
+        roleGroup.selectToggle(btnRoleStudent);
+
+        // Keep exactly one role selected and keep prompt text in sync.
+        roleGroup.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
+            if (newToggle == null) {
+                if (oldToggle != null) {
+                    oldToggle.setSelected(true);
+                } else {
+                    btnRoleStudent.setSelected(true);
+                }
+                return;
+            }
+            onRoleChanged();
+        });
+        onRoleChanged();
 
         txtPasswordVisible = new TextField();
         txtPasswordVisible.setPromptText("Nhap mat khau");
@@ -64,6 +80,13 @@ public class LoginController implements Initializable {
         txtUsername.setOnAction(e -> txtPassword.requestFocus());
         txtUsername.textProperty().addListener((o, ov, nv) -> lblError.setText(""));
         txtPassword.textProperty().addListener((o, ov, nv) -> lblError.setText(""));
+    }
+
+    private void onRoleChanged() {
+        boolean isLecturer = btnRoleLecturer.isSelected();
+        txtUsername.setPromptText(isLecturer
+            ? "Nhập tên đăng nhập hoặc MSGV"
+            : "Nhập tên đăng nhập hoặc MSSV");
     }
 
     @FXML

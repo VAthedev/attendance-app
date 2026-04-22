@@ -1,7 +1,6 @@
 package server;
 
 import database.DatabaseHelper;
-
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -23,7 +22,7 @@ public class Server {
 
     public void start() {
         try {
-            DatabaseHelper.getInstance().getConnection();
+            DatabaseHelper.getInstance().getDatabase();
         } catch (Exception e) {
             System.err.println("[Server] Loi khoi tao DB: " + e.getMessage());
             return;
@@ -33,12 +32,9 @@ public class Server {
             serverSocket = new ServerSocket(PORT);
             running = true;
             System.out.println("[Server] Dang chay tren port " + PORT);
-            System.out.println("[Server] Cho ket noi tu client...");
             // vào vòng lặp chờ client kết nối
             while (running) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("[Server] Client ket noi: "
-                        + clientSocket.getInetAddress().getHostAddress());
                 // Thread pool giúp server xử lý được nhiều client cùng lúc
                 ClientHandler handler = new ClientHandler(clientSocket);
                 threadPool.execute(handler);
@@ -58,7 +54,6 @@ public class Server {
                 serverSocket.close();
             threadPool.shutdown();
             DatabaseHelper.getInstance().close();
-            System.out.println("[Server] Da dung.");
         } catch (Exception e) {
             System.err.println("[Server] Loi khi dung: " + e.getMessage());
         }

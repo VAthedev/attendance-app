@@ -1,17 +1,16 @@
 package server;
 
 import database.UserRepository;
-import model.User;
-import protocol.Request;
-import protocol.Response;
-import security.SHA256Util;
-import security.TokenManager;
-
 import java.io.*;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import model.User;
+import protocol.Request;
+import protocol.Response;
+import security.SHA256Util;
+import security.TokenManager;
 
 public class ClientHandler implements Runnable {
 
@@ -33,17 +32,13 @@ public class ClientHandler implements Runnable {
 
             String line;
             while ((line = reader.readLine()) != null) {
-                System.out.println("[Handler] Nhan RAW: " + line);
                 Request  req = Request.fromJson(line);
-                System.out.println("[Handler] Type: " + req.getType());
-                System.out.println("[Handler] Payload: " + req.getPayload());
                 Response res = handleRequest(req);
                 writer.println(res.toJson());
-                System.out.println("[Handler] Gui: " + res.toJson());
             }
 
         } catch (IOException e) {
-            System.out.println("[Handler] Client ngat ket noi: " + e.getMessage());
+            System.err.println("[Handler] Client ngat ket noi: " + e.getMessage());
         } finally {
             close();
         }
@@ -62,7 +57,6 @@ public class ClientHandler implements Runnable {
             }
         } catch (Exception e) {
             System.err.println("[Handler] Loi xu ly: " + e.getMessage());
-            e.printStackTrace();
             return Response.error("Loi server: " + e.getMessage());
         }
     }
@@ -70,8 +64,6 @@ public class ClientHandler implements Runnable {
     private Response handleLogin(Request req) throws SQLException {
         String username = req.getPayloadValue("username");
         String password = req.getPayloadValue("password");
-        System.out.println("[LOGIN] username=" + username + " password=" + password);
-
         if (username == null || username.isEmpty()) return Response.error("Thieu username.");
         if (password == null || password.isEmpty()) return Response.error("Thieu password.");
 
@@ -79,7 +71,6 @@ public class ClientHandler implements Runnable {
         User user = repo.login(username, password);
 
         if (user == null) {
-            System.out.println("[LOGIN] Sai thong tin.");
             return Response.error("Ten dang nhap hoac mat khau khong dung.");
         }
 
@@ -91,7 +82,6 @@ public class ClientHandler implements Runnable {
         data.put("role",     user.getRole());
         data.put("userId",   user.getId());
         data.put("fullName", user.getFullName() != null ? user.getFullName() : "");
-        System.out.println("[LOGIN] Thanh cong: " + username);
         return Response.ok(data);
     }
 
@@ -103,9 +93,6 @@ public class ClientHandler implements Runnable {
         String studentId = req.getPayloadValue("studentId");
         String email     = req.getPayloadValue("email");
 
-        System.out.println("[REGISTER] username=" + username + " role=" + role
-            + " fullName=" + fullName + " studentId=" + studentId + " email=" + email);
-
         if (username == null || username.isEmpty()) return Response.error("Thieu username.");
         if (password == null || password.isEmpty()) return Response.error("Thieu password.");
         if (role == null || role.isEmpty())         return Response.error("Thieu role.");
@@ -115,7 +102,6 @@ public class ClientHandler implements Runnable {
 
         UserRepository repo = new UserRepository();
         repo.register(username, password, role, fullName, studentId, email);
-        System.out.println("[REGISTER] Thanh cong: " + username);
         return Response.ok("Dang ky thanh cong.");
     }
 
@@ -129,7 +115,6 @@ public class ClientHandler implements Runnable {
 
         String otp = SHA256Util.generateOTP();
         otpStore.put(email, otp);
-        System.out.println("[OTP] " + email + " -> " + otp);
         return Response.ok("OTP da gui den " + email);
     }
 

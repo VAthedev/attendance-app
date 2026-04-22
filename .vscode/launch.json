@@ -3,10 +3,14 @@
   "configurations": [
     {
       "type": "java",
-      "name": "Main",
+      "name": "Launch Server",
       "request": "launch",
-      "mainClass": "client.Main",
-      "projectName": "attendance-app_92b3f3f6"
+      "mainClass": "server.Server",
+      "projectName": "attendance-app",
+      "classPaths": [
+        "bin",
+        "lib/*"
+      ]
     },
     {
       "type": "java",
@@ -14,6 +18,10 @@
       "request": "launch",
       "mainClass": "client.Main",
       "projectName": "attendance-app",
+      "classPaths": [
+        "bin",
+        "lib/*"
+      ],
       "vmArgs": "--module-path ${workspaceFolder}\\lib\\javafx-sdk-21\\lib --add-modules javafx.controls,javafx.fxml"
     }
   ]

@@ -1,16 +1,28 @@
 package database;
 
+import com.mongodb.ErrorCategory;
+import com.mongodb.MongoException;
+import com.mongodb.MongoWriteException;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
 import model.User;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 import security.SHA256Util;
 
-import java.sql.*;
+import java.sql.SQLException;
+import java.util.Date;
 
 public class UserRepository {
 
-    private final Connection conn;
+    private final MongoCollection<Document> usersCollection;
 
     public UserRepository() throws SQLException {
-        this.conn = DatabaseHelper.getInstance().getConnection();
+        try {
+            this.usersCollection = DatabaseHelper.getInstance().getUsersCollection();
+        } catch (MongoException e) {
+            throw new SQLException("Khong the ket noi MongoDB: " + e.getMessage(), e);
+        }
     }
 
     // Dang ky user moi - nhan password thô, tu hash ben trong
@@ -18,108 +30,130 @@ public class UserRepository {
                             String fullName, String studentId, String email) throws SQLException {
         String salt = SHA256Util.generateSalt();
         String hash = SHA256Util.hashWithSalt(password, salt);
+        String objectId = new ObjectId().toHexString();
 
-        String sql = "INSERT INTO users (username, password_hash, salt, role, full_name, student_id, email) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, username);
-            ps.setString(2, hash);
-            ps.setString(3, salt);
-            ps.setString(4, role);
-            ps.setString(5, fullName);
-            ps.setString(6, studentId);
-            ps.setString(7, email);
-            ps.executeUpdate();
+        Document userDoc = new Document("_id", objectId)
+            .append("id", toLegacyIntId(objectId))
+            .append("username", username)
+            .append("password_hash", hash)
+            .append("salt", salt)
+            .append("role", role)
+            .append("full_name", fullName)
+            .append("student_id", studentId)
+            .append("email", email)
+            .append("device_id", null)
+            .append("session_token", null)
+            .append("created_at", new Date());
+
+        try {
+            usersCollection.insertOne(userDoc);
             return true;
-        } catch (SQLException e) {
-            if (e.getMessage().contains("UNIQUE")) {
+        } catch (MongoWriteException e) {
+            if (e.getError().getCategory() == ErrorCategory.DUPLICATE_KEY) {
                 throw new SQLException("Ten dang nhap hoac email da ton tai.");
             }
-            throw e;
+            throw new SQLException("Loi ghi du lieu: " + e.getMessage(), e);
+        } catch (MongoException e) {
+            throw new SQLException("Loi MongoDB: " + e.getMessage(), e);
         }
     }
 
     // Dang nhap - nhan password thô, lay salt tu DB roi verify
     public User login(String username, String password) throws SQLException {
-        String sql = "SELECT * FROM users WHERE username = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, username);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                String salt       = rs.getString("salt");
-                String storedHash = rs.getString("password_hash");
+        try {
+            Document userDoc = usersCollection.find(Filters.eq("username", username)).first();
+            if (userDoc != null) {
+                String salt = userDoc.getString("salt");
+                String storedHash = userDoc.getString("password_hash");
 
-                // Lay salt tu DB, hash password + salt, so sanh
                 if (SHA256Util.verify(password, salt, storedHash)) {
-                    return mapUser(rs);
-                } else {
-                    return null; // Sai mat khau
+                    return mapUser(userDoc);
                 }
             }
+            return null;
+        } catch (MongoException e) {
+            throw new SQLException("Loi MongoDB: " + e.getMessage(), e);
         }
-        return null; // Khong tim thay username
     }
 
     public void saveSessionToken(int userId, String token) throws SQLException {
-        String sql = "UPDATE users SET session_token = ? WHERE id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, token);
-            ps.setInt(2, userId);
-            ps.executeUpdate();
+        try {
+            usersCollection.updateOne(
+                Filters.eq("id", userId),
+                new Document("$set", new Document("session_token", token))
+            );
+        } catch (MongoException e) {
+            throw new SQLException("Loi MongoDB: " + e.getMessage(), e);
         }
     }
 
     public void saveDeviceId(int userId, String deviceId) throws SQLException {
-        String sql = "UPDATE users SET device_id = ? WHERE id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, deviceId);
-            ps.setInt(2, userId);
-            ps.executeUpdate();
+        try {
+            usersCollection.updateOne(
+                Filters.eq("id", userId),
+                new Document("$set", new Document("device_id", deviceId))
+            );
+        } catch (MongoException e) {
+            throw new SQLException("Loi MongoDB: " + e.getMessage(), e);
         }
     }
 
     public boolean updatePassword(String email, String newPassword) throws SQLException {
         String salt = SHA256Util.generateSalt();
         String hash = SHA256Util.hashWithSalt(newPassword, salt);
-        String sql  = "UPDATE users SET password_hash = ?, salt = ? WHERE email = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, hash);
-            ps.setString(2, salt);
-            ps.setString(3, email);
-            return ps.executeUpdate() > 0;
+        try {
+            return usersCollection.updateOne(
+                Filters.eq("email", email),
+                new Document("$set", new Document("password_hash", hash).append("salt", salt))
+            ).getModifiedCount() > 0;
+        } catch (MongoException e) {
+            throw new SQLException("Loi MongoDB: " + e.getMessage(), e);
         }
     }
 
     public User findByEmail(String email) throws SQLException {
-        String sql = "SELECT * FROM users WHERE email = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, email);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return mapUser(rs);
+        try {
+            Document userDoc = usersCollection.find(Filters.eq("email", email)).first();
+            return userDoc != null ? mapUser(userDoc) : null;
+        } catch (MongoException e) {
+            throw new SQLException("Loi MongoDB: " + e.getMessage(), e);
         }
-        return null;
     }
 
     public User findByToken(String token) throws SQLException {
-        String sql = "SELECT * FROM users WHERE session_token = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, token);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return mapUser(rs);
+        try {
+            Document userDoc = usersCollection.find(Filters.eq("session_token", token)).first();
+            return userDoc != null ? mapUser(userDoc) : null;
+        } catch (MongoException e) {
+            throw new SQLException("Loi MongoDB: " + e.getMessage(), e);
         }
-        return null;
     }
 
-    private User mapUser(ResultSet rs) throws SQLException {
+    private User mapUser(Document doc) {
         User u = new User();
-        u.setId(rs.getInt("id"));
-        u.setUsername(rs.getString("username"));
-        u.setRole(rs.getString("role"));
-        u.setFullName(rs.getString("full_name"));
-        u.setEmail(rs.getString("email"));
-        u.setStudentId(rs.getString("student_id"));
-        u.setDeviceId(rs.getString("device_id"));
-        u.setSessionToken(rs.getString("session_token"));
+        u.setId(extractLegacyIntId(doc));
+        u.setUsername(doc.getString("username"));
+        u.setRole(doc.getString("role"));
+        u.setFullName(doc.getString("full_name"));
+        u.setEmail(doc.getString("email"));
+        u.setStudentId(doc.getString("student_id"));
+        u.setDeviceId(doc.getString("device_id"));
+        u.setSessionToken(doc.getString("session_token"));
         return u;
+    }
+
+    private int extractLegacyIntId(Document doc) {
+        Integer id = doc.getInteger("id");
+        if (id != null) {
+            return id;
+        }
+
+        Object mongoId = doc.get("_id");
+        String rawId = mongoId != null ? mongoId.toString() : "0";
+        return toLegacyIntId(rawId);
+    }
+
+    private int toLegacyIntId(String rawId) {
+        return Math.abs(rawId.hashCode());
     }
 }

@@ -10,7 +10,6 @@ import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import protocol.Request;
 import protocol.RequestType;
-import protocol.Response;
 import util.FxmlUtil;
 
 import java.net.URL;
@@ -37,9 +36,28 @@ public class RegisterController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        btnRoleStudent.setSelected(true);
-        btnRoleStudent.setOnAction(e -> { btnRoleStudent.setSelected(true);  btnRoleLecturer.setSelected(false); });
-        btnRoleLecturer.setOnAction(e -> { btnRoleLecturer.setSelected(true); btnRoleStudent.setSelected(false); });
+        if (roleGroup == null) {
+            roleGroup = new ToggleGroup();
+        }
+        btnRoleStudent.setToggleGroup(roleGroup);
+        btnRoleLecturer.setToggleGroup(roleGroup);
+        roleGroup.selectToggle(btnRoleStudent);
+
+        // Keep label/prompt synced whenever role selection changes.
+        roleGroup.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
+            if (newToggle == null) {
+                if (oldToggle != null) {
+                    oldToggle.setSelected(true);
+                } else {
+                    btnRoleStudent.setSelected(true);
+                }
+                return;
+            }
+            onRoleChanged();
+        });
+
+        // Ensure label/prompt are always in sync with current role at startup.
+        onRoleChanged();
 
         txtPassword.textProperty().addListener((o, ov, nv) -> updatePasswordStrength(nv));
         txtUsername.textProperty().addListener((o, ov, nv) -> lblError.setText(""));
@@ -49,8 +67,8 @@ public class RegisterController implements Initializable {
     @FXML
     private void onRoleChanged() {
         boolean isLecturer = btnRoleLecturer.isSelected();
-        lblStudentId.setText(isLecturer ? "Ma giang vien" : "MSSV");
-        txtStudentId.setPromptText(isLecturer ? "VD: GV001" : "VD: 2151234567");
+        lblStudentId.setText(isLecturer ? "MSGV" : "MSSV");
+        txtStudentId.setPromptText(isLecturer ? "VD: MSGV001" : "VD: 2151234567");
     }
 
     @FXML
@@ -65,7 +83,7 @@ public class RegisterController implements Initializable {
 
         // Validate
         if (fullName.isEmpty())  { showError("Vui long nhap ho ten."); return; }
-        if (studentId.isEmpty()) { showError("Vui long nhap MSSV/Ma GV."); return; }
+        if (studentId.isEmpty()) { showError("Vui long nhap MSSV/MSGV."); return; }
         if (username.isEmpty())  { showError("Vui long nhap ten dang nhap."); return; }
         if (email.isEmpty() || !email.contains("@")) { showError("Email khong hop le."); return; }
         if (password.length() < 8) { showError("Mat khau phai toi thieu 8 ky tu."); return; }
@@ -83,13 +101,10 @@ public class RegisterController implements Initializable {
         payload.put("studentId", studentId);
         payload.put("email",     email);
 
-        System.out.println("[Register] Gui payload: " + payload);
-
         Request req = new Request(RequestType.REGISTER, payload);
         SocketClient.getInstance().sendAsync(req, response -> {
             btnRegister.setDisable(false);
             btnRegister.setText("Tao tai khoan");
-            System.out.println("[Register] Response: " + response.toJson());
 
             if (response.isOk()) {
                 goToLogin();

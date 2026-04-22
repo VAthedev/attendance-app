@@ -37,7 +37,6 @@ public class SocketClient {
                                                                                                                      // dang
                                                                                                                      // JSON
             connected = true;
-            System.out.println("[Client] Ket noi server thanh cong.");
             return true;
         } catch (IOException e) {
             connected = false;
@@ -53,10 +52,8 @@ public class SocketClient {
         }
         try {
             String json = request.toJson();
-            System.out.println("[Client] Gui: " + json);
             writer.println(json);
             String responseJson = reader.readLine();
-            System.out.println("[Client] Nhan: " + responseJson);
             if (responseJson == null) {
                 connected = false;
                 return Response.error("Server ngat ket noi.");

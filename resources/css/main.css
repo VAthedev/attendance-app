@@ -31,7 +31,7 @@
 }
 
 .banner-stat {
-    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-background-color: rgba(255, 255, 255, 0.1);
     -fx-background-radius: 8;
     -fx-padding: 10 14 10 14;
     -fx-spacing: 4;
@@ -49,6 +49,28 @@
 }
 
 .check-icon {
+    -fx-font-size: 14px;
+}
+
+.register-feature-list {
+    -fx-padding: 6 0 0 0;
+}
+
+.register-feature-item {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 10;
+    -fx-padding: 9 12 9 12;
+}
+
+.register-feature-icon {
+    -fx-text-fill: #60b8ff;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-min-width: 14;
+}
+
+.register-feature-text {
+    -fx-text-fill: #d6e7f9;
     -fx-font-size: 14px;
 }
 
@@ -91,7 +113,7 @@
 .auth-field:focused {
     -fx-background-color: #ffffff;
     -fx-border-color: #2563eb;
-    -fx-effect: dropshadow(gaussian, rgba(37,99,235,0.15), 8, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.15), 8, 0, 0, 0);
 }
 
 /* ===== OTP FIELDS ===== */
@@ -148,7 +170,7 @@
 
 .btn-primary:hover {
     -fx-background-color: #1d4ed8;
-    -fx-effect: dropshadow(gaussian, rgba(37,99,235,0.35), 12, 0, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.35), 12, 0, 0, 3);
 }
 
 .btn-primary:pressed {
@@ -196,9 +218,17 @@
     -fx-background-radius: 2;
 }
 
-.pw-bar-weak   { -fx-background-color: #ef4444; }
-.pw-bar-medium { -fx-background-color: #f59e0b; }
-.pw-bar-strong { -fx-background-color: #22c55e; }
+.pw-bar-weak {
+    -fx-background-color: #ef4444;
+}
+
+.pw-bar-medium {
+    -fx-background-color: #f59e0b;
+}
+
+.pw-bar-strong {
+    -fx-background-color: #22c55e;
+}
 
 .pw-strength-label {
     -fx-font-size: 11.5px;
@@ -213,7 +243,7 @@
     -fx-border-width: 0;
 }
 
-.scroll-transparent > .viewport {
+.scroll-transparent>.viewport {
     -fx-background-color: transparent;
 }
 
@@ -346,12 +376,12 @@
 }
 
 .sidebar-btn:hover {
-    -fx-background-color: rgba(255,255,255,0.08);
+    -fx-background-color: rgba(255, 255, 255, 0.08);
     -fx-text-fill: #ffffff;
 }
 
 .sidebar-btn-active {
-    -fx-background-color: rgba(37,99,235,0.3);
+    -fx-background-color: rgba(37, 99, 235, 0.3);
     -fx-text-fill: #ffffff;
     -fx-border-color: #2563eb;
     -fx-border-width: 0 0 0 3;
@@ -362,7 +392,7 @@
 }
 
 .sidebar-btn-logout:hover {
-    -fx-background-color: rgba(239,68,68,0.15);
+    -fx-background-color: rgba(239, 68, 68, 0.15);
     -fx-text-fill: #f87171;
 }
 
@@ -396,12 +426,29 @@
     -fx-border-width: 1;
 }
 
-.stat-card-blue   { -fx-background-color: #eff6ff; -fx-border-color: #bfdbfe; }
-.stat-card-green  { -fx-background-color: #f0fdf4; -fx-border-color: #bbf7d0; }
-.stat-card-amber  { -fx-background-color: #fffbeb; -fx-border-color: #fde68a; }
-.stat-card-red    { -fx-background-color: #fef2f2; -fx-border-color: #fecaca; }
+.stat-card-blue {
+    -fx-background-color: #eff6ff;
+    -fx-border-color: #bfdbfe;
+}
 
-.stat-card-icon   { -fx-font-size: 24px; }
+.stat-card-green {
+    -fx-background-color: #f0fdf4;
+    -fx-border-color: #bbf7d0;
+}
+
+.stat-card-amber {
+    -fx-background-color: #fffbeb;
+    -fx-border-color: #fde68a;
+}
+
+.stat-card-red {
+    -fx-background-color: #fef2f2;
+    -fx-border-color: #fecaca;
+}
+
+.stat-card-icon {
+    -fx-font-size: 24px;
+}
 
 .stat-card-number {
     -fx-font-size: 28px;
@@ -459,9 +506,29 @@
 }
 
 /* ===== ATTENDANCE BADGE ===== */
-.badge-present { -fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 4; -fx-padding: 2 8 2 8; -fx-font-size: 11px; }
-.badge-absent  { -fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-background-radius: 4; -fx-padding: 2 8 2 8; -fx-font-size: 11px; }
-.badge-late    { -fx-background-color: #fef3c7; -fx-text-fill: #d97706; -fx-background-radius: 4; -fx-padding: 2 8 2 8; -fx-font-size: 11px; }
+.badge-present {
+    -fx-background-color: #dcfce7;
+    -fx-text-fill: #16a34a;
+    -fx-background-radius: 4;
+    -fx-padding: 2 8 2 8;
+    -fx-font-size: 11px;
+}
+
+.badge-absent {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #dc2626;
+    -fx-background-radius: 4;
+    -fx-padding: 2 8 2 8;
+    -fx-font-size: 11px;
+}
+
+.badge-late {
+    -fx-background-color: #fef3c7;
+    -fx-text-fill: #d97706;
+    -fx-background-radius: 4;
+    -fx-padding: 2 8 2 8;
+    -fx-font-size: 11px;
+}
 
 /* ===== EMPTY / COMING SOON ===== */
 .empty-label {
@@ -484,7 +551,10 @@
     -fx-font-weight: bold;
     -fx-cursor: hand;
 }
-.btn-danger:hover { -fx-background-color: #b91c1c; }
+
+.btn-danger:hover {
+    -fx-background-color: #b91c1c;
+}
 
 .btn-secondary {
     -fx-background-color: #f1f5f9;
@@ -496,4 +566,7 @@
     -fx-border-radius: 8;
     -fx-border-width: 1;
 }
-.btn-secondary:hover { -fx-background-color: #e2e8f0; }
+
+.btn-secondary:hover {
+    -fx-background-color: #e2e8f0;
+}
