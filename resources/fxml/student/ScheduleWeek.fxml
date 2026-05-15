@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="controller.student.ScheduleWeekController"
+            fitToWidth="true"
+            styleClass="scroll-transparent"
+            stylesheets="@../../css/main.css">
+    <VBox spacing="0">
+
+        <!-- ===== HEADER + WEEK SELECTOR ===== -->
+        <VBox styleClass="page-section-header" spacing="16">
+            <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
+
+            <!-- Title -->
+            <VBox spacing="4">
+                <Label text="📆  Xem Thời Khóa Biểu Theo Tuần" styleClass="section-title"/>
+                <Label text="Xem toàn bộ lịch học của tuần này" styleClass="section-subtitle"/>
+            </VBox>
+
+            <!-- Week navigation -->
+            <HBox spacing="16" alignment="CENTER_LEFT">
+                <VBox spacing="6">
+                    <Label text="Chọn tuần" styleClass="field-label"/>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Button text="← Tuần trước" styleClass="btn-secondary" 
+                               onAction="#handlePreviousWeek" prefWidth="110"/>
+                        <Label fx:id="lblWeekRange" text="Tuần 1 (03/01 - 09/01)" 
+                              style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #1a2744; -fx-min-width: 150;"/>
+                        <Button text="Tuần sau →" styleClass="btn-secondary" 
+                               onAction="#handleNextWeek" prefWidth="110"/>
+                        <Separator orientation="VERTICAL" style="-fx-padding: 0 4;"/>
+                        <Button text="Tuần này" styleClass="btn-primary" 
+                               onAction="#handleCurrentWeek" prefWidth="90"/>
+                    </HBox>
+                </VBox>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <!-- View mode selector -->
+                <VBox spacing="6">
+                    <Label text="Chế độ xem" styleClass="field-label"/>
+                    <HBox spacing="8">
+                        <ToggleButton text="📊 Lưới" styleClass="view-mode-toggle" 
+                                     selected="true" toggleGroup="$viewModeGroup"
+                                     userData="GRID"/>
+                        <ToggleButton text="📋 Danh sách" styleClass="view-mode-toggle"
+                                     toggleGroup="$viewModeGroup"
+                                     userData="LIST"/>
+                        <fx:define>
+                            <ToggleGroup fx:id="viewModeGroup"/>
+                        </fx:define>
+                    </HBox>
+                </VBox>
+            </HBox>
+        </VBox>
+
+        <Separator/>
+
+        <!-- ===== CONTENT AREA ===== -->
+        <VBox spacing="16">
+            <padding><Insets top="20" bottom="20" left="24" right="24"/></padding>
+
+            <!-- Week summary stats -->
+            <HBox spacing="12">
+                <VBox styleClass="stat-card,stat-card-blue" HBox.hgrow="ALWAYS" spacing="6">
+                    <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
+                    <Label text="📚" styleClass="stat-card-icon"/>
+                    <Label fx:id="lblTotalClassWeek" text="0" styleClass="stat-card-number"/>
+                    <Label text="Tổng tiết học" styleClass="stat-card-label"/>
+                </VBox>
+
+                <VBox styleClass="stat-card,stat-card-green" HBox.hgrow="ALWAYS" spacing="6">
+                    <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
+                    <Label text="✅" styleClass="stat-card-icon"/>
+                    <Label fx:id="lblAttendedWeek" text="0" styleClass="stat-card-number"/>
+                    <Label text="Đã điểm danh" styleClass="stat-card-label"/>
+                </VBox>
+
+                <VBox styleClass="stat-card,stat-card-amber" HBox.hgrow="ALWAYS" spacing="6">
+                    <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
+                    <Label text="⭕" styleClass="stat-card-icon"/>
+                    <Label fx:id="lblPendingWeek" text="0" styleClass="stat-card-number"/>
+                    <Label text="Chưa điểm danh" styleClass="stat-card-label"/>
+                </VBox>
+
+                <VBox styleClass="stat-card,stat-card-red" HBox.hgrow="ALWAYS" spacing="6">
+                    <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
+                    <Label text="❌" styleClass="stat-card-icon"/>
+                    <Label fx:id="lblMissedWeek" text="0" styleClass="stat-card-number"/>
+                    <Label text="Đã qua hạn" styleClass="stat-card-label"/>
+                </VBox>
+            </HBox>
+
+            <!-- ===== WEEK GRID VIEW ===== -->
+            <VBox fx:id="weekGridContainer" styleClass="week-grid-container" spacing="0">
+                <Label text="📅  Lịch học tuần" styleClass="card-title"/>
+                <Region prefHeight="12"/>
+                
+                <!-- Days of week headers -->
+                <HBox styleClass="week-header" spacing="2">
+                    <padding><Insets top="12" bottom="12" left="0" right="0"/></padding>
+                    <Label text="Thứ 2" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
+                    <Label text="Thứ 3" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
+                    <Label text="Thứ 4" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
+                    <Label text="Thứ 5" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
+                    <Label text="Thứ 6" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
+                    <Label text="Thứ 7" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
+                    <Label text="CN" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
+                </HBox>
+
+                <!-- Days columns -->
+                <HBox fx:id="weekGridDays" spacing="2" VBox.vgrow="ALWAYS"/>
+
+                <!-- Empty state -->
+                <VBox fx:id="emptyWeekBox" alignment="CENTER" spacing="12" 
+                     visible="false" managed="false">
+                    <padding><Insets top="60" bottom="60"/></padding>
+                    <Label text="📭" style="-fx-font-size: 48px;"/>
+                    <Label text="Tuần này không có lớp học" 
+                          styleClass="empty-label" style="-fx-font-size: 16px;"/>
+                </VBox>
+            </VBox>
+
+            <!-- ===== LIST VIEW (Hidden by default) ===== -->
+            <VBox fx:id="weekListContainer" spacing="12" visible="false" managed="false">
+                <Label text="📋  Danh sách lớp học tuần" styleClass="card-title"/>
+                <VBox fx:id="weekListBox" spacing="8"/>
+            </VBox>
+
+            <!-- ===== LEGEND ===== -->
+            <VBox spacing="8" style="-fx-background-color: #f8fafc; -fx-background-radius: 8; -fx-padding: 16;">
+                <Label text="Chú thích" styleClass="field-label"/>
+                <HBox spacing="24">
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Rectangle width="20" height="20" style="-fx-fill: #22c55e; -fx-arc-width: 4; -fx-arc-height: 4;"/>
+                        <Label text="Đã điểm danh" styleClass="legend-text"/>
+                    </HBox>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Rectangle width="20" height="20" style="-fx-fill: #f59e0b; -fx-arc-width: 4; -fx-arc-height: 4;"/>
+                        <Label text="Sắp tới" styleClass="legend-text"/>
+                    </HBox>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Rectangle width="20" height="20" style="-fx-fill: #ef4444; -fx-arc-width: 4; -fx-arc-height: 4;"/>
+                        <Label text="Chưa điểm danh" styleClass="legend-text"/>
+                    </HBox>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Rectangle width="20" height="20" style="-fx-fill: #d1d5db; -fx-arc-width: 4; -fx-arc-height: 4;"/>
+                        <Label text="Đã qua hạn" styleClass="legend-text"/>
+                    </HBox>
+                </HBox>
+            </VBox>
+        </VBox>
+    </VBox>
+</ScrollPane>

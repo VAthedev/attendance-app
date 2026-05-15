@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="controller.student.ScheduleSubjectController"
+            fitToWidth="true"
+            styleClass="scroll-transparent"
+            stylesheets="@../../css/main.css">
+    <VBox spacing="0">
+
+        <!-- ===== HEADER + SUBJECT SELECTOR ===== -->
+        <VBox styleClass="page-section-header" spacing="16">
+            <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
+
+            <!-- Title -->
+            <VBox spacing="4">
+                <Label text="📚  Xem Thời Khóa Biểu Theo Môn Học" styleClass="section-title"/>
+                <Label text="Xem lịch học chi tiết từng môn học" styleClass="section-subtitle"/>
+            </VBox>
+
+            <!-- Subject filter -->
+            <HBox spacing="16" alignment="CENTER_LEFT">
+                <VBox spacing="6">
+                    <Label text="Chọn môn học" styleClass="field-label"/>
+                    <ComboBox fx:id="cbSubjects" 
+                             promptText="-- Chọn một môn học --"
+                             styleClass="schedule-date-picker"
+                             onAction="#handleSubjectChanged"
+                             maxWidth="250" prefHeight="36"/>
+                </VBox>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <!-- Quick stats for selected subject -->
+                <VBox spacing="6" fx:id="subjectStatsBox" visible="false">
+                    <Label text="Thông tin môn học" styleClass="field-label"/>
+                    <HBox spacing="12">
+                        <VBox spacing="2" style="-fx-background-color: #eff6ff; -fx-background-radius: 8; -fx-padding: 8;">
+                            <Label text="Giảng viên" style="-fx-font-size: 11px; -fx-text-fill: #6b7a99;"/>
+                            <Label fx:id="lblSubjectLecturer" text="" style="-fx-font-weight: bold; -fx-text-fill: #1a2744;"/>
+                        </VBox>
+                        <VBox spacing="2" style="-fx-background-color: #f0fdf4; -fx-background-radius: 8; -fx-padding: 8;">
+                            <Label text="Tín chỉ" style="-fx-font-size: 11px; -fx-text-fill: #6b7a99;"/>
+                            <Label fx:id="lblSubjectCredits" text="" style="-fx-font-weight: bold; -fx-text-fill: #1a2744;"/>
+                        </VBox>
+                        <VBox spacing="2" style="-fx-background-color: #fef3c7; -fx-background-radius: 8; -fx-padding: 8;">
+                            <Label text="Tiết học" style="-fx-font-size: 11px; -fx-text-fill: #6b7a99;"/>
+                            <Label fx:id="lblSubjectSessions" text="" style="-fx-font-weight: bold; -fx-text-fill: #1a2744;"/>
+                        </VBox>
+                    </HBox>
+                </VBox>
+            </HBox>
+        </VBox>
+
+        <Separator/>
+
+        <!-- ===== CONTENT AREA ===== -->
+        <VBox spacing="16">
+            <padding><Insets top="20" bottom="20" left="24" right="24"/></padding>
+
+            <!-- Subject stats -->
+            <HBox spacing="12" fx:id="subjectStatCardsBox" visible="false">
+                <VBox styleClass="stat-card,stat-card-blue" HBox.hgrow="ALWAYS" spacing="6">
+                    <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
+                    <Label text="📖" styleClass="stat-card-icon"/>
+                    <Label fx:id="lblTotalSessions" text="0" styleClass="stat-card-number"/>
+                    <Label text="Tổng tiết học" styleClass="stat-card-label"/>
+                </VBox>
+
+                <VBox styleClass="stat-card,stat-card-green" HBox.hgrow="ALWAYS" spacing="6">
+                    <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
+                    <Label text="✅" styleClass="stat-card-icon"/>
+                    <Label fx:id="lblAttendedSessions" text="0" styleClass="stat-card-number"/>
+                    <Label text="Đã tham gia" styleClass="stat-card-label"/>
+                </VBox>
+
+                <VBox styleClass="stat-card,stat-card-amber" HBox.hgrow="ALWAYS" spacing="6">
+                    <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
+                    <Label text="⭕" styleClass="stat-card-icon"/>
+                    <Label fx:id="lblAbsentSessions" text="0" styleClass="stat-card-number"/>
+                    <Label text="Vắng mặt" styleClass="stat-card-label"/>
+                </VBox>
+
+                <VBox styleClass="stat-card,stat-card-red" HBox.hgrow="ALWAYS" spacing="6">
+                    <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
+                    <Label text="📊" styleClass="stat-card-icon"/>
+                    <Label fx:id="lblAttendanceRate" text="0%" styleClass="stat-card-number"/>
+                    <Label text="Tỷ lệ chuyên cần" styleClass="stat-card-label"/>
+                </VBox>
+            </HBox>
+
+            <!-- Schedule list for subject -->
+            <VBox styleClass="schedule-timeline" spacing="12" fx:id="subjectScheduleBox">
+                <Label text="📅  Lịch học của môn này" styleClass="card-title"/>
+                <VBox fx:id="subjectSessionsList" spacing="8"/>
+
+                <!-- Empty state -->
+                <VBox fx:id="emptySubjectBox" alignment="CENTER" spacing="12" 
+                     visible="false" managed="false">
+                    <padding><Insets top="40" bottom="40"/></padding>
+                    <Label text="📭" style="-fx-font-size: 48px;"/>
+                    <Label text="Hãy chọn một môn học để xem lịch học" 
+                          styleClass="empty-label" style="-fx-font-size: 16px;"/>
+                </VBox>
+            </VBox>
+
+            <!-- Semester progress -->
+            <VBox spacing="12" fx:id="semesterProgressBox" visible="false">
+                <Label text="📈  Tiến độ học tập" styleClass="card-title"/>
+                
+                <VBox spacing="8" style="-fx-background-color: #ffffff; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-border-width: 1; -fx-padding: 16;">
+                    <HBox spacing="12" alignment="CENTER_LEFT">
+                        <Label text="Buổi học đã tham gia:" style="-fx-font-weight: bold;"/>
+                        <ProgressBar fx:id="attendanceProgress" prefWidth="300" prefHeight="20"/>
+                        <Label fx:id="lblAttendancePercent" text="0%"/>
+                    </HBox>
+                    <Separator style="-fx-padding: 4 0;"/>
+                    <HBox spacing="12" alignment="CENTER_LEFT">
+                        <Label text="Buổi học còn lại:" style="-fx-font-weight: bold;"/>
+                        <ProgressBar fx:id="remainingProgress" prefWidth="300" prefHeight="20"/>
+                        <Label fx:id="lblRemainingPercent" text="0%"/>
+                    </HBox>
+                </VBox>
+            </VBox>
+        </VBox>
+    </VBox>
+</ScrollPane>

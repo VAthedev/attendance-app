@@ -6,122 +6,228 @@
 
 <ScrollPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="controller.lecturer.OpenSessionController"
-            fitToWidth="true" styleClass="scroll-transparent"
+            fitToWidth="true"
+            styleClass="scroll-transparent"
             stylesheets="@../../css/main.css">
+    <VBox spacing="0">
 
-    <VBox spacing="20">
-        <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
+        <!-- ===== HEADER ===== -->
+        <VBox styleClass="page-section-header" spacing="16">
+            <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
 
-        <!-- Chon mon hoc -->
-        <VBox styleClass="dashboard-card" spacing="14">
-            <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-            <Label text="📚  Chọn môn học" styleClass="card-title"/>
-
-            <HBox spacing="16">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="Môn học" styleClass="field-label"/>
-                    <ComboBox fx:id="cmbSubject" promptText="Chọn môn học..."
-                              maxWidth="Infinity" styleClass="auth-field"/>
-                </VBox>
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="Buổi học" styleClass="field-label"/>
-                    <ComboBox fx:id="cmbSchedule" promptText="Chọn buổi học..."
-                              maxWidth="Infinity" styleClass="auth-field"/>
-                </VBox>
-            </HBox>
+            <!-- Title -->
+            <VBox spacing="4">
+                <Label text="🚀  Mở Phiên Điểm Danh" styleClass="section-title"/>
+                <Label text="Bắt đầu một phiên điểm danh mới cho lớp học" styleClass="section-subtitle"/>
+            </VBox>
         </VBox>
 
-        <!-- Cau hinh phien -->
-        <VBox styleClass="dashboard-card" spacing="14">
-            <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-            <Label text="⚙️  Cấu hình phiên điểm danh" styleClass="card-title"/>
+        <Separator/>
 
-            <HBox spacing="16">
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="Thời gian mở (phút)" styleClass="field-label"/>
-                    <TextField fx:id="txtDuration" text="15"
-                               styleClass="auth-field" maxWidth="Infinity"/>
-                </VBox>
-                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                    <Label text="Phương thức xác minh" styleClass="field-label"/>
-                    <HBox spacing="12">
-                        <CheckBox fx:id="chkGPS"  text="GPS"  selected="true"/>
-                        <CheckBox fx:id="chkWiFi" text="WiFi" selected="true"/>
-                    </HBox>
-                </VBox>
-            </HBox>
+        <!-- ===== CONTENT AREA ===== -->
+        <VBox spacing="20">
+            <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
 
-            <!-- GPS config -->
-            <VBox fx:id="boxGPSConfig" spacing="10">
-                <Label text="📍  Cấu hình GPS" styleClass="field-label"/>
+            <!-- ===== STEP 1: SELECT CLASS ===== -->
+            <VBox spacing="16" styleClass="session-step">
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="1" styleClass="step-number"/>
+                    <Label text="Chọn lớp học" styleClass="step-title"/>
+                </HBox>
+
                 <HBox spacing="16">
                     <VBox spacing="6" HBox.hgrow="ALWAYS">
-                        <Label text="Vĩ độ (Latitude)" styleClass="field-label"/>
-                        <TextField fx:id="txtLat" promptText="VD: 10.7769" styleClass="auth-field" maxWidth="Infinity"/>
+                        <Label text="Lớp học" styleClass="field-label"/>
+                        <ComboBox fx:id="cbClasses" 
+                                 promptText="-- Chọn lớp --"
+                                 styleClass="schedule-date-picker"
+                                 onAction="#handleClassSelected"
+                                 maxWidth="Infinity"/>
                     </VBox>
+
                     <VBox spacing="6" HBox.hgrow="ALWAYS">
-                        <Label text="Kinh độ (Longitude)" styleClass="field-label"/>
-                        <TextField fx:id="txtLng" promptText="VD: 106.7009" styleClass="auth-field" maxWidth="Infinity"/>
+                        <Label text="Môn học" styleClass="field-label"/>
+                        <Label fx:id="lblSelectedSubject" text="--" 
+                              style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 10 14; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-border-width: 1;"/>
                     </VBox>
-                    <VBox spacing="6">
-                        <Label text="Bán kính (m)" styleClass="field-label"/>
-                        <TextField fx:id="txtRadius" text="100" styleClass="auth-field" prefWidth="100"/>
+
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Giảng viên" styleClass="field-label"/>
+                        <Label fx:id="lblLecturerName" text="--" 
+                              style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 10 14; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-border-width: 1;"/>
                     </VBox>
                 </HBox>
             </VBox>
 
-            <!-- WiFi config -->
-            <VBox fx:id="boxWiFiConfig" spacing="6">
-                <Label text="📶  BSSID WiFi trường" styleClass="field-label"/>
-                <TextField fx:id="txtBSSID" promptText="VD: AA:BB:CC:DD:EE:FF"
-                           styleClass="auth-field" maxWidth="Infinity"/>
+            <!-- ===== STEP 2: CONFIGURE SESSION ===== -->
+            <VBox spacing="16" styleClass="session-step">
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="2" styleClass="step-number"/>
+                    <Label text="Cấu hình phiên điểm danh" styleClass="step-title"/>
+                </HBox>
+
+                <GridPane hgap="16" vgap="12">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50"/>
+                        <ColumnConstraints percentWidth="50"/>
+                    </columnConstraints>
+
+                    <!-- Session time -->
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label text="Thời gian bắt đầu" styleClass="field-label"/>
+                        <HBox spacing="8">
+                            <DatePicker fx:id="dpSessionDate" styleClass="schedule-date-picker" maxWidth="150"/>
+                            <Spinner fx:id="spHour" min="0" max="23" editable="true" prefWidth="80"/>
+                            <Label text=":" style="-fx-font-size: 16px;"/>
+                            <Spinner fx:id="spMinute" min="0" max="59" editable="true" prefWidth="80"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Session duration -->
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label text="Thời lượng (phút)" styleClass="field-label"/>
+                        <HBox spacing="8">
+                            <Spinner fx:id="spDuration" min="5" max="180" initialValue="50" 
+                                    editable="true" prefWidth="100"/>
+                            <Label text="phút" style="-fx-text-fill: #6b7a99; -fx-font-size: 13px;"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Session mode -->
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <Label text="Chế độ điểm danh" styleClass="field-label"/>
+                        <HBox spacing="8">
+                            <CheckBox fx:id="cbGPS" text="✓ Xác minh GPS" selected="true"/>
+                            <CheckBox fx:id="cbWiFi" text="✓ Xác minh WiFi" selected="true"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Location -->
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label text="Phòng học" styleClass="field-label"/>
+                        <TextField fx:id="tfRoom" promptText="Ví dụ: P.201" styleClass="auth-field"/>
+                    </VBox>
+
+                    <!-- GPS Config -->
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="2" fx:id="boxGPSConfig">
+                        <Label text="📍  Cấu hình GPS" styleClass="field-label"/>
+                        <HBox spacing="16">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Vĩ độ (Latitude)" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="txtLat" promptText="VD: 10.7769" styleClass="auth-field" maxWidth="Infinity"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Kinh độ (Longitude)" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="txtLng" promptText="VD: 106.7009" styleClass="auth-field" maxWidth="Infinity"/>
+                            </VBox>
+                            <VBox spacing="6">
+                                <Label text="Bán kính (m)" style="-fx-font-size: 11px;"/>
+                                <TextField fx:id="txtRadius" text="100" styleClass="auth-field" prefWidth="100"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <!-- WiFi Config -->
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="3" fx:id="boxWiFiConfig">
+                        <Label text="📶  BSSID WiFi trường" styleClass="field-label"/>
+                        <TextField fx:id="txtBSSID" promptText="VD: AA:BB:CC:DD:EE:FF"
+                                   styleClass="auth-field" maxWidth="Infinity"/>
+                    </VBox>
+
+                    <!-- Notes -->
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="4">
+                        <Label text="Ghi chú (tuỳ chọn)" styleClass="field-label"/>
+                        <TextArea fx:id="taSessionNotes" wrapText="true" prefRowCount="3"
+                                 style="-fx-background-color: #f1f5f9; -fx-border-color: #e2e8f0; -fx-border-radius: 8;"/>
+                    </VBox>
+                </GridPane>
+            </VBox>
+
+            <!-- ===== STEP 3: PREVIEW & CONFIRM ===== -->
+            <VBox spacing="16" styleClass="session-step">
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="3" styleClass="step-number"/>
+                    <Label text="Xác nhận thông tin" styleClass="step-title"/>
+                </HBox>
+
+                <!-- Session info card -->
+                <VBox styleClass="session-preview-card" spacing="12">
+                    <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+
+                    <GridPane hgap="24" vgap="12">
+                        <columnConstraints>
+                            <ColumnConstraints prefWidth="150"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+
+                        <Label text="Lớp:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
+                        <Label fx:id="lblPreviewClass" text="--"/>
+
+                        <Label text="Môn học:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
+                        <Label fx:id="lblPreviewSubject" text="--"/>
+
+                        <Label text="Giảng viên:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
+                        <Label fx:id="lblPreviewLecturer" text="--"/>
+
+                        <Label text="Thời gian:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
+                        <Label fx:id="lblPreviewDateTime" text="--"/>
+
+                        <Label text="Thời lượng:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
+                        <Label fx:id="lblPreviewDuration" text="--"/>
+
+                        <Label text="Phòm học:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
+                        <Label fx:id="lblPreviewRoom" text="--"/>
+
+                        <Label text="Xác minh:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
+                        <Label fx:id="lblPreviewVerification" text="--"/>
+                    </GridPane>
+
+                    <!-- Active session display -->
+                    <Separator/>
+                    <HBox spacing="20" alignment="CENTER_LEFT" fx:id="boxActiveSessionDisplay" visible="false" managed="false">
+                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                            <Label fx:id="lblSessionSubject" text="" styleClass="schedule-subject"/>
+                            <Label fx:id="lblSessionInfo" text="" styleClass="schedule-time"/>
+                        </VBox>
+                        <VBox alignment="CENTER" spacing="4">
+                            <Label text="Đếm ngược" style="-fx-font-size: 11px; -fx-text-fill: #6b7a99;"/>
+                            <Label fx:id="lblCountdown" text="50:00" styleClass="countdown-label" style="-fx-font-size: 28px;"/>
+                        </VBox>
+                    </HBox>
+                </VBox>
+            </VBox>
+
+            <!-- ===== ACTION BUTTONS ===== -->
+            <HBox spacing="12" alignment="CENTER_RIGHT">
+                <Label fx:id="lblError" text="" styleClass="error-label" wrapText="true" HBox.hgrow="ALWAYS"/>
+                <Button text="Hủy" styleClass="btn-secondary" onAction="#handleCancel" prefWidth="100"/>
+                <Button fx:id="btnOpenSession" text="🚀  Mở phiên điểm danh" styleClass="btn-primary" 
+                       onAction="#handleStartSession" prefWidth="200" prefHeight="44"/>
+            </HBox>
+
+            <!-- Close session button (visible when session is open) -->
+            <HBox spacing="12" fx:id="boxCloseButton" visible="false" managed="false">
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="btnCloseSession" text="⏹  Đóng phiên sớm" styleClass="btn-danger" 
+                       onAction="#handleCloseSession" prefWidth="180" prefHeight="44"/>
+                <Button text="🔄  Làm mới" styleClass="btn-secondary" onAction="#handleRefresh" prefWidth="120" prefHeight="44"/>
+            </HBox>
+
+            <!-- Info message -->
+            <VBox spacing="8" style="-fx-background-color: #eff6ff; -fx-background-radius: 8; -fx-border-color: #bfdbfe; -fx-border-radius: 8; -fx-border-width: 1; -fx-padding: 12;">
+                <HBox spacing="8" alignment="TOP_LEFT">
+                    <Label text="ℹ️" style="-fx-font-size: 16px;"/>
+                    <VBox spacing="4">
+                        <Label text="Lưu ý về mở phiên điểm danh:" style="-fx-font-weight: bold; -fx-text-fill: #1e40af;"/>
+                        <Label text="• Sinh viên sẽ nhận được thông báo khi phiên bắt đầu" 
+                              style="-fx-text-fill: #1e40af; -fx-font-size: 12px;" wrapText="true"/>
+                        <Label text="• Bạn có thể theo dõi sinh viên điểm danh trực tiếp" 
+                              style="-fx-text-fill: #1e40af; -fx-font-size: 12px;" wrapText="true"/>
+                        <Label text="• Đóng phiên sau khi đã yêu cầu sinh viên điểm danh đủ" 
+                              style="-fx-text-fill: #1e40af; -fx-font-size: 12px;" wrapText="true"/>
+                    </VBox>
+                </HBox>
             </VBox>
         </VBox>
-
-        <!-- Hien thi phien dang mo -->
-        <VBox fx:id="boxActiveSession" styleClass="dashboard-card" spacing="14"
-              visible="false" managed="false">
-            <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-            <Label text="▶  Phiên đang mở" styleClass="card-title"/>
-
-            <HBox spacing="20" alignment="CENTER_LEFT">
-                <VBox spacing="4" HBox.hgrow="ALWAYS">
-                    <Label fx:id="lblSessionSubject" text="" styleClass="schedule-subject"/>
-                    <Label fx:id="lblSessionInfo"    text="" styleClass="schedule-time"/>
-                </VBox>
-                <VBox alignment="CENTER" spacing="4">
-                    <Label text="Đếm ngược" styleClass="field-label"/>
-                    <Label fx:id="lblCountdown" text="15:00" styleClass="countdown-label"
-                           style="-fx-font-size:28px;"/>
-                </VBox>
-            </HBox>
-
-            <!-- Progress diem danh -->
-            <HBox spacing="12" alignment="CENTER_LEFT">
-                <Label text="Đã điểm danh:" styleClass="schedule-time"/>
-                <Label fx:id="lblCheckedIn" text="0 / 0 sinh viên"
-                       style="-fx-font-weight:bold;-fx-text-fill:#16a34a;"/>
-            </HBox>
-            <ProgressBar fx:id="progressAttendance" progress="0"
-                         maxWidth="Infinity" prefHeight="10"/>
-
-            <HBox spacing="12">
-                <Button fx:id="btnCloseSession" text="⏹  Đóng phiên sớm"
-                        styleClass="btn-danger" prefHeight="40" onAction="#handleCloseSession"/>
-                <Button text="🔄  Làm mới" styleClass="btn-secondary"
-                        prefHeight="40" onAction="#refreshSession"/>
-            </HBox>
-        </VBox>
-
-        <!-- Nut mo phien -->
-        <VBox fx:id="boxOpenBtn">
-            <Label fx:id="lblError" text="" styleClass="error-label"
-                   wrapText="true" maxWidth="Infinity"/>
-            <Region prefHeight="8"/>
-            <Button fx:id="btnOpenSession" text="▶  Mở phiên điểm danh"
-                    styleClass="btn-primary" maxWidth="Infinity"
-                    prefHeight="50" onAction="#handleOpenSession"/>
-        </VBox>
-
     </VBox>
 </ScrollPane>

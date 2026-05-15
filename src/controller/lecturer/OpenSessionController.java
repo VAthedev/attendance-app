@@ -5,129 +5,199 @@ import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 import java.net.URL;
-import java.util.ResourceBundle;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 public class OpenSessionController implements Initializable {
 
-    @FXML private ComboBox<String> cmbSubject, cmbSchedule;
-    @FXML private TextField txtDuration, txtLat, txtLng, txtRadius, txtBSSID;
-    @FXML private CheckBox  chkGPS, chkWiFi;
+    // Step 1: Select class
+    @FXML private ComboBox<String> cbClasses;
+    @FXML private Label lblSelectedSubject, lblLecturerName;
 
-    @FXML private VBox  boxActiveSession, boxGPSConfig, boxWiFiConfig, boxOpenBtn;
-    @FXML private Label lblSessionSubject, lblSessionInfo;
-    @FXML private Label lblCountdown, lblCheckedIn, lblError;
+    // Step 2: Configure session
+    @FXML private DatePicker dpSessionDate;
+    @FXML private Spinner<Integer> spHour, spMinute, spDuration;
+    @FXML private CheckBox cbGPS, cbWiFi;
+    @FXML private TextField tfRoom, txtLat, txtLng, txtRadius, txtBSSID;
+    @FXML private TextArea taSessionNotes;
+
+    // Step 3: Preview & Confirm
+    @FXML private Label lblPreviewClass, lblPreviewSubject, lblPreviewLecturer;
+    @FXML private Label lblPreviewDateTime, lblPreviewDuration, lblPreviewRoom, lblPreviewVerification;
+    @FXML private Label lblSessionSubject, lblSessionInfo, lblCountdown;
+    @FXML private HBox boxActiveSessionDisplay, boxCloseButton;
+    @FXML private Label lblError;
     @FXML private Button btnOpenSession, btnCloseSession;
-    @FXML private ProgressBar progressAttendance;
+
+    // VBox for GPS and WiFi config
+    @FXML private VBox boxGPSConfig, boxWiFiConfig;
 
     private Timeline countdownTimer;
-    private int      remainingSeconds = 0;
-    private int      currentSessionId = -1;
+    private int remainingSeconds = 0;
+    private int currentSessionId = -1;
+    private ClassInfo selectedClass;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // Load danh sach mon hoc
-        cmbSubject.getItems().addAll(
-            "Lập trình mạng - NT204",
-            "Cơ sở dữ liệu - IT002",
-            "Giải thuật - IT003"
-        );
-        cmbSubject.setOnAction(e -> loadSchedules());
-
-        // An/hien GPS/WiFi config
-        chkGPS.setOnAction(e -> {
-            boxGPSConfig.setVisible(chkGPS.isSelected());
-            boxGPSConfig.setManaged(chkGPS.isSelected());
-        });
-        chkWiFi.setOnAction(e -> {
-            boxWiFiConfig.setVisible(chkWiFi.isSelected());
-            boxWiFiConfig.setManaged(chkWiFi.isSelected());
-        });
+        initializeClasses();
+        setupDateTimeSpinners();
+        setupConfigVisibility();
     }
 
-    private void loadSchedules() {
-        cmbSchedule.getItems().clear();
-        cmbSchedule.getItems().addAll(
-            "Thứ 3 - 07:30~09:10 - P.201",
-            "Thứ 5 - 13:00~14:40 - P.305"
+    private void initializeClasses() {
+        // Mock data - replace with database
+        cbClasses.getItems().addAll(
+            "CTK43A - Lập trình mạng",
+            "CTK43A - Cơ sở dữ liệu",
+            "CTK43B - Giải thuật"
         );
+    }
+
+    private void setupDateTimeSpinners() {
+        dpSessionDate.setValue(LocalDate.now());
+        
+        LocalTime now = LocalTime.now();
+        SpinnerValueFactory<Integer> hourFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, now.getHour());
+        SpinnerValueFactory<Integer> minuteFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 59, now.getMinute());
+        SpinnerValueFactory<Integer> durationFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(5, 180, 50, 5);
+
+        spHour.setValueFactory(hourFactory);
+        spMinute.setValueFactory(minuteFactory);
+        spDuration.setValueFactory(durationFactory);
+    }
+
+    private void setupConfigVisibility() {
+        cbGPS.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            boxGPSConfig.setVisible(newVal);
+            boxGPSConfig.setManaged(newVal);
+        });
+
+        cbWiFi.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            boxWiFiConfig.setVisible(newVal);
+            boxWiFiConfig.setManaged(newVal);
+        });
+
+        boxGPSConfig.setVisible(true);
+        boxWiFiConfig.setVisible(true);
     }
 
     @FXML
-    private void handleOpenSession() {
-        // Validate
-        if (cmbSubject.getValue() == null) { showError("Vui lòng chọn môn học."); return; }
-        if (cmbSchedule.getValue() == null) { showError("Vui lòng chọn buổi học."); return; }
-
-        String durationStr = txtDuration.getText().trim();
-        int duration;
-        try {
-            duration = Integer.parseInt(durationStr);
-            if (duration < 1 || duration > 60) throw new NumberFormatException();
-        } catch (NumberFormatException e) {
-            showError("Thời gian phải là số từ 1-60 phút.");
+    public void handleClassSelected() {
+        String selected = cbClasses.getValue();
+        if (selected == null || selected.isEmpty()) {
+            lblSelectedSubject.setText("--");
+            lblLecturerName.setText("--");
+            selectedClass = null;
             return;
         }
 
-        if (!chkGPS.isSelected() && !chkWiFi.isSelected()) {
-            showError("Phải chọn ít nhất 1 phương thức xác minh.");
+        // Parse selected class
+        String[] parts = selected.split(" - ");
+        selectedClass = new ClassInfo(parts[0], parts.length > 1 ? parts[1] : "", "TS. Nguyễn Văn A");
+        
+        lblSelectedSubject.setText(selectedClass.subject);
+        lblLecturerName.setText(selectedClass.lecturer);
+
+        // Update preview
+        updatePreview();
+    }
+
+    private void updatePreview() {
+        if (selectedClass == null) return;
+
+        lblPreviewClass.setText(selectedClass.className);
+        lblPreviewSubject.setText(selectedClass.subject);
+        lblPreviewLecturer.setText(selectedClass.lecturer);
+
+        LocalDate date = dpSessionDate.getValue();
+        int hour = spHour.getValue();
+        int minute = spMinute.getValue();
+        String dateTimeStr = String.format("%s lúc %02d:%02d", 
+            date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), hour, minute);
+        lblPreviewDateTime.setText(dateTimeStr);
+
+        int duration = spDuration.getValue();
+        lblPreviewDuration.setText(duration + " phút");
+
+        lblPreviewRoom.setText(tfRoom.getText().isEmpty() ? "--" : tfRoom.getText());
+
+        String verification = "";
+        if (cbGPS.isSelected()) verification += "GPS ";
+        if (cbWiFi.isSelected()) verification += "WiFi";
+        lblPreviewVerification.setText(verification.isEmpty() ? "--" : verification);
+    }
+
+    @FXML
+    public void handleStartSession() {
+        // Validate
+        if (selectedClass == null) {
+            showError("Vui lòng chọn lớp học.");
+            return;
+        }
+        if (tfRoom.getText().trim().isEmpty()) {
+            showError("Vui lòng nhập phòng học.");
+            return;
+        }
+        if (!cbGPS.isSelected() && !cbWiFi.isSelected()) {
+            showError("Vui lòng chọn ít nhất một phương thức xác minh.");
+            return;
+        }
+
+        if (cbGPS.isSelected()) {
+            if (txtLat.getText().trim().isEmpty() || txtLng.getText().trim().isEmpty()) {
+                showError("Vui lòng nhập tọa độ GPS.");
+                return;
+            }
+        }
+
+        if (cbWiFi.isSelected() && txtBSSID.getText().trim().isEmpty()) {
+            showError("Vui lòng nhập BSSID WiFi.");
             return;
         }
 
         lblError.setText("");
         btnOpenSession.setDisable(true);
-        btnOpenSession.setText("Đang mở...");
 
-        // TODO: Gui OPEN_SESSION request qua SocketClient
-        // Map<String, Object> payload = new HashMap<>();
-        // payload.put("scheduleId", selectedScheduleId);
-        // payload.put("duration", duration);
-        // payload.put("gpsLat",   txtLat.getText());
-        // payload.put("gpsLng",   txtLng.getText());
-        // payload.put("gpsRadius",txtRadius.getText());
-        // payload.put("bssid",    txtBSSID.getText());
-        // SocketClient.getInstance().sendAsync(new Request(RequestType.OPEN_SESSION, payload), res -> {
-        //     if (res.isOk()) startCountdown(duration, Integer.parseInt(res.getDataValue("sessionId")));
-        //     else showError(res.getMessage());
-        // });
-
-        // Demo tam thoi
-        startCountdown(duration, 1);
+        // TODO: Send OPEN_SESSION request to server
+        // For now, start countdown demo
+        int duration = spDuration.getValue();
+        startCountdown(duration);
     }
 
-    private void startCountdown(int minutes, int sessionId) {
-        currentSessionId  = sessionId;
-        remainingSeconds  = minutes * 60;
+    private void startCountdown(int minutes) {
+        remainingSeconds = minutes * 60;
+        currentSessionId = 1;
 
-        // Hien thi panel phien dang mo
-        lblSessionSubject.setText(cmbSubject.getValue());
-        lblSessionInfo.setText(cmbSchedule.getValue() + "  •  " + minutes + " phút");
-        lblCheckedIn.setText("0 / 35 sinh viên");
-        progressAttendance.setProgress(0);
+        // Update preview to show active session
+        lblSessionSubject.setText(selectedClass.subject);
+        lblSessionInfo.setText(selectedClass.className + "  •  " + selectedClass.lecturer + "  •  " + minutes + " phút");
 
-        boxActiveSession.setVisible(true);
-        boxActiveSession.setManaged(true);
-        boxOpenBtn.setVisible(false);
-        boxOpenBtn.setManaged(false);
-        btnOpenSession.setDisable(false);
-        btnOpenSession.setText("▶  Mở phiên điểm danh");
+        // Show active session display and close button
+        boxActiveSessionDisplay.setVisible(true);
+        boxActiveSessionDisplay.setManaged(true);
+        boxCloseButton.setVisible(true);
+        boxCloseButton.setManaged(true);
 
-        // Bat dau dem nguoc
+        // Start countdown timer
         countdownTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
             remainingSeconds--;
             int min = remainingSeconds / 60;
             int sec = remainingSeconds % 60;
             lblCountdown.setText(String.format("%02d:%02d", min, sec));
 
-            // Canh bao 1 phut cuoi
+            // Change color when 1 minute left
             if (remainingSeconds == 60) {
-                lblCountdown.setStyle("-fx-font-size:28px;-fx-text-fill:#f59e0b;-fx-font-weight:bold;");
+                lblCountdown.setStyle("-fx-font-size: 28px; -fx-text-fill: #f59e0b; -fx-font-weight: bold;");
             }
             if (remainingSeconds == 0) {
-                stopCountdown("Phiên đã tự động đóng.");
+                stopCountdown("Phiên đã tự động đóng.", true);
             }
         }));
         countdownTimer.setCycleCount(minutes * 60);
@@ -135,33 +205,91 @@ public class OpenSessionController implements Initializable {
     }
 
     @FXML
-    private void handleCloseSession() {
-        stopCountdown("Phiên đã đóng sớm.");
-        // TODO: Gui CLOSE_SESSION request
+    public void handleCloseSession() {
+        stopCountdown("Phiên đã đóng sớm.", false);
+        // TODO: Send CLOSE_SESSION request to server
     }
 
     @FXML
-    private void refreshSession() {
-        lblCheckedIn.setText("12 / 35 sinh viên");
-        progressAttendance.setProgress(12.0 / 35.0);
-        // TODO: Gui GET_SESSION_STATUS request
+    public void handleRefresh() {
+        // TODO: Send GET_SESSION_STATUS request to get updated attendance count
     }
 
-    private void stopCountdown(String msg) {
-        if (countdownTimer != null) countdownTimer.stop();
-        boxActiveSession.setVisible(false);
-        boxActiveSession.setManaged(false);
-        boxOpenBtn.setVisible(true);
-        boxOpenBtn.setManaged(true);
+    @FXML
+    public void handleCancel() {
+        cbClasses.setValue(null);
+        dpSessionDate.setValue(LocalDate.now());
+        spHour.getValueFactory().setValue(LocalTime.now().getHour());
+        spMinute.getValueFactory().setValue(LocalTime.now().getMinute());
+        spDuration.getValueFactory().setValue(50);
+        tfRoom.setText("");
+        txtLat.setText("");
+        txtLng.setText("");
+        txtRadius.setText("100");
+        txtBSSID.setText("");
+        taSessionNotes.setText("");
+        cbGPS.setSelected(true);
+        cbWiFi.setSelected(true);
+        lblError.setText("");
+        handleClassSelected();
+    }
+
+    private void stopCountdown(String msg, boolean autoClose) {
+        if (countdownTimer != null) {
+            countdownTimer.stop();
+        }
+        
+        boxActiveSessionDisplay.setVisible(false);
+        boxActiveSessionDisplay.setManaged(false);
+        
+        if (autoClose) {
+            boxCloseButton.setVisible(false);
+            boxCloseButton.setManaged(false);
+        }
+
         lblError.setText(msg);
-        lblError.setStyle("-fx-text-fill:#16a34a;-fx-background-color:#f0fdf4;" +
-                          "-fx-background-radius:6;-fx-padding:6 10 6 10;");
+        if (autoClose) {
+            lblError.setStyle("-fx-text-fill: #16a34a; -fx-background-color: #f0fdf4;");
+        }
+
+        btnOpenSession.setDisable(false);
+        btnOpenSession.setText("🚀  Mở phiên điểm danh");
         currentSessionId = -1;
     }
 
     private void showError(String msg) {
         lblError.setText(msg);
-        lblError.setStyle(null);
         lblError.getStyleClass().setAll("error-label");
+    }
+
+    // ===== STEP UPDATE EVENT HANDLERS =====
+    @FXML
+    public void handleDateChanged() {
+        updatePreview();
+    }
+
+    @FXML
+    public void handleTimeChanged() {
+        updatePreview();
+    }
+
+    @FXML
+    public void handleDurationChanged() {
+        updatePreview();
+    }
+
+    @FXML
+    public void handleRoomChanged() {
+        updatePreview();
+    }
+
+    private static class ClassInfo {
+        String className, subject, lecturer;
+
+        ClassInfo(String className, String subject, String lecturer) {
+            this.className = className;
+            this.subject = subject;
+            this.lecturer = lecturer;
+        }
     }
 }
