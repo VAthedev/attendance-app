@@ -1,0 +1,80 @@
+# Maven
+target/
+*.jar
+*.war
+*.ear
+*.zip
+*.tar
+*.tar.gz
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.flattened-pom.xml
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+*.iws
+*.ipr
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+attendance.db
+
+# Build output
+out/
+dist/
+.gradle/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+config.properties
+config.properties.local
+**/config.properties
+
+# Logs
+logs/
+*.log
+*.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+resources/TKB.xlsx
+.github/java-upgrade/*/
+lib/
+bin/
+
+# Temporary scripts
+*.bat
+*.ps1
+
+# IntelliJ
+*.iml
+.idea/
+
+# Misc
+*.class
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace

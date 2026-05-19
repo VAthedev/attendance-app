@@ -1,16 +1,26 @@
 package controller.student;
 
-import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
-import javafx.geometry.Insets;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
 import java.net.URL;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.ResourceBundle;
+
+import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 
 public class ScheduleWeekController implements Initializable {
 
@@ -51,7 +61,7 @@ public class ScheduleWeekController implements Initializable {
         LocalDate weekEnd = currentWeekStart.plusDays(6);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM");
         
-        int weekNum = currentWeekStart.get(ChronoField.WEEK_OF_YEAR);
+        int weekNum = currentWeekStart.get(java.time.temporal.WeekFields.ISO.weekOfYear());
         lblWeekRange.setText(String.format("Tuần %d (%s - %s)", 
             weekNum, 
             currentWeekStart.format(formatter),
@@ -107,7 +117,7 @@ public class ScheduleWeekController implements Initializable {
         for (int day = 1; day <= 7; day++) {
             VBox dayColumn = new VBox(4);
             dayColumn.getStyleClass().add("week-day-column");
-            dayColumn.setHgrow(dayColumn, Priority.ALWAYS);
+            VBox.setVgrow(dayColumn, Priority.ALWAYS);
             dayColumn.setPrefHeight(300);
 
             LocalDate date = currentWeekStart.plusDays(day - 1);
