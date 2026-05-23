@@ -1,20 +1,26 @@
 package controller.auth;
 
+import java.net.URL;
+import java.util.Map;
+import java.util.ResourceBundle;
+
 import client.network.SocketClient;
+import controller.lecturer.LecturerDashboardController;
+import controller.student.StudentDashboardController;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.stage.Stage;
 import protocol.Request;
 import protocol.RequestType;
-import protocol.Response;
 import util.FxmlUtil;
-
-import java.net.URL;
-import java.util.Map;
-import java.util.ResourceBundle;
 
 public class LoginController implements Initializable {
 
@@ -107,7 +113,11 @@ public class LoginController implements Initializable {
         SocketClient.getInstance().sendAsync(req, response -> {
             setLoading(false);
             if (response.isOk()) {
-                navigateToDashboard(response.getDataValue("role"));
+                SocketClient.getInstance().setCurrentUser(
+                        response.getDataValue("userId"),
+                        response.getDataValue("fullName"),
+                        response.getDataValue("role"));
+                navigateToDashboard(response);
             } else {
                 showError(response.getMessage());
             }
@@ -140,10 +150,36 @@ public class LoginController implements Initializable {
     private void showError(String msg)  { lblError.setText(msg); }
     private void setLoading(boolean on) { btnLogin.setDisable(on); btnLogin.setText(on ? "Dang dang nhap..." : "Dang nhap"); }
 
-    private void navigateToDashboard(String role) {
-        loadScene("LECTURER".equals(role)
-            ? "/fxml/lecturer/LecturerDashboard.fxml"
-            : "/fxml/student/StudentDashboard.fxml", "Dashboard");
+    private void navigateToDashboard(protocol.Response response) {
+        String role = response.getDataValue("role");
+        String fullName = valueOr(response.getDataValue("fullName"), "");
+        String studentId = valueOr(response.getDataValue("studentId"), "");
+        String username = valueOr(response.getDataValue("username"), "");
+        String token = valueOr(response.getDataValue("token"), "");
+
+        try {
+            FXMLLoader loader;
+            Stage stage = (Stage) btnLogin.getScene().getWindow();
+            if ("LECTURER".equals(role)) {
+                loader = FxmlUtil.loader("/fxml/lecturer/LecturerDashboard.fxml");
+                stage.setScene(new Scene(loader.load()));
+                stage.setTitle("Dashboard");
+                LecturerDashboardController controller = loader.getController();
+                controller.setUserInfo(fullName, !studentId.isBlank() ? studentId : (!username.isBlank() ? username : String.valueOf(response.getDataValue("userId"))), token);
+            } else {
+                loader = FxmlUtil.loader("/fxml/student/StudentDashboard.fxml");
+                stage.setScene(new Scene(loader.load()));
+                stage.setTitle("Dashboard");
+                StudentDashboardController controller = loader.getController();
+                controller.setUserInfo(fullName, !studentId.isBlank() ? studentId : (!username.isBlank() ? username : String.valueOf(response.getDataValue("userId"))), token);
+            }
+        } catch (Exception e) {
+            showError("Loi: " + e.getMessage());
+        }
+    }
+
+    private String valueOr(String value, String fallback) {
+        return value != null ? value : fallback;
     }
 
     private void loadScene(String fxmlPath, String title) {

@@ -1,19 +1,25 @@
 package controller.lecturer;
 
+import java.net.URL;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ResourceBundle;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import util.FxmlUtil;
-
-import java.net.URL;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ResourceBundle;
 
 public class LecturerDashboardController implements Initializable {
 
@@ -158,7 +164,7 @@ public class LecturerDashboardController implements Initializable {
     @FXML private void showAttendanceList() { setActiveBtn(btnAttendanceList); lblPageTitle.setText("Danh sách điểm danh");  showComing(); }
     @FXML private void showStatistics()     { setActiveBtn(btnStatistics);     lblPageTitle.setText("Thống kê chuyên cần");  showComing(); }
     @FXML private void showExport()         { setActiveBtn(btnExport);         lblPageTitle.setText("Xuất danh sách");       showComing(); }
-    @FXML private void showChat()           { setActiveBtn(btnChat);           lblPageTitle.setText("Chat lớp học");         showComing(); }
+    @FXML private void showChat()           { setActiveBtn(btnChat);           lblPageTitle.setText("Chat nội bộ lớp học");  loadSubPane("/fxml/shared/Chat.fxml"); }
     @FXML private void showNotification()   { setActiveBtn(btnNotification);   lblPageTitle.setText("Thông báo");            showComing(); }
 
     @FXML private void handleLogout() { loadScene("/fxml/auth/Login.fxml", "Dang nhap"); }

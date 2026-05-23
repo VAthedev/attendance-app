@@ -1,19 +1,24 @@
 package controller.student;
 
+import java.net.URL;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ResourceBundle;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import util.FxmlUtil;
-
-import java.net.URL;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ResourceBundle;
 
 public class StudentDashboardController implements Initializable {
 
@@ -123,12 +128,12 @@ public class StudentDashboardController implements Initializable {
         loadSubPane("/fxml/student/AttendanceGPS.fxml");
     }
 
-    @FXML private void showScheduleDay()     { setActiveBtn(btnScheduleDay);     lblPageTitle.setText("TKB theo ngày");       showComing(); }
-    @FXML private void showScheduleWeek()    { setActiveBtn(btnScheduleWeek);    lblPageTitle.setText("TKB theo tuần");       showComing(); }
-    @FXML private void showScheduleSubject() { setActiveBtn(btnScheduleSubject); lblPageTitle.setText("TKB theo môn");        showComing(); }
+    @FXML private void showScheduleDay()     { setActiveBtn(btnScheduleDay);     lblPageTitle.setText("TKB theo ngày");       loadSubPane("/fxml/student/ScheduleDay.fxml"); }
+    @FXML private void showScheduleWeek()    { setActiveBtn(btnScheduleWeek);    lblPageTitle.setText("TKB theo tuần");       loadSubPane("/fxml/student/ScheduleWeek.fxml"); }
+    @FXML private void showScheduleSubject() { setActiveBtn(btnScheduleSubject); lblPageTitle.setText("TKB theo môn");        loadSubPane("/fxml/student/ScheduleSubject.fxml"); }
     @FXML private void showHistory()         { setActiveBtn(btnHistory);         lblPageTitle.setText("Lịch sử điểm danh");  showComing(); }
     @FXML private void showStats()           { setActiveBtn(btnStats);           lblPageTitle.setText("Thống kê chuyên cần"); showComing(); }
-    @FXML private void showChat()            { setActiveBtn(btnChat);            lblPageTitle.setText("Chat lớp học");        showComing(); }
+    @FXML private void showChat()            { setActiveBtn(btnChat);            lblPageTitle.setText("Chat nội bộ lớp học"); loadSubPane("/fxml/shared/Chat.fxml"); }
     @FXML private void showNotification()    { setActiveBtn(btnNotification);    lblPageTitle.setText("Thông báo");           showComing(); }
 
     @FXML private void handleLogout() {

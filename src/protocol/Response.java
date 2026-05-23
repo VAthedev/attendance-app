@@ -12,6 +12,7 @@ public class Response {
     private String              message;
     private Map<String, Object> data;
     private long                timestamp;
+    private String              nonce;
 
     // Constructor
     public Response(String status, String message, Map<String, Object> data) {
@@ -20,6 +21,10 @@ public class Response {
         this.data      = data != null ? data : new HashMap<>();
         this.timestamp = System.currentTimeMillis();
     }
+
+    // optional nonce to correlate request/response
+    public void setNonce(String nonce) { this.nonce = nonce; }
+    public String getNonce() { return nonce; }
 
     // Factory methods
     public static Response ok(Map<String, Object> data) {
@@ -38,6 +43,9 @@ public class Response {
     public String toJson() {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
+        if (nonce != null && !nonce.isEmpty()) {
+            sb.append("\"nonce\":\"").append(nonce).append("\",");
+        }
         sb.append("\"status\":\"").append(status).append("\",");
         sb.append("\"message\":\"").append(escapeJson(message)).append("\",");
         sb.append("\"timestamp\":").append(timestamp).append(",");
@@ -60,6 +68,7 @@ public class Response {
 
     public static Response fromJson(String json) {
         try {
+            String nonce     = extractString(json, "nonce");
             String status    = extractString(json, "status");
             String message   = extractString(json, "message");
             long   timestamp = extractLong(json, "timestamp");
@@ -74,6 +83,7 @@ public class Response {
 
             Response res   = new Response(status, message, data);
             res.timestamp  = timestamp;
+            if (nonce != null && !nonce.isEmpty()) res.setNonce(nonce);
             return res;
         } catch (Exception e) {
             return Response.error("Parse error: " + e.getMessage());
@@ -86,6 +96,11 @@ public class Response {
     public String  getMessage()             { return message; }
     public Map<String, Object> getData()    { return data; }
     public long    getTimestamp()           { return timestamp; }
+
+    public void putPayload(String key, Object value) {
+        if (data == null) data = new HashMap<>();
+        data.put(key, value);
+    }
 
     public String getDataValue(String key) {
         Object val = data.get(key);

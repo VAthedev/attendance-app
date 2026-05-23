@@ -1,14 +1,23 @@
 package controller.student;
 
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.ResourceBundle;
+
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import java.net.URL;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 
 public class ScheduleSubjectController implements Initializable {
 
@@ -29,35 +38,48 @@ public class ScheduleSubjectController implements Initializable {
     }
 
     private void initializeSubjects() {
-        // Mock data - replace with database
-        subjectsData.put("Lập trình mạng", new SubjectInfo(
-            "Lập trình mạng", "TS. Nguyễn Văn A", 3, 15,
-            Arrays.asList(
-                new SessionInfo("15/03/2026", "07:30 - 09:10", "P.201", "ATTENDED"),
-                new SessionInfo("22/03/2026", "07:30 - 09:10", "P.201", "ATTENDED"),
-                new SessionInfo("29/03/2026", "07:30 - 09:10", "P.201", "ATTENDED"),
-                new SessionInfo("05/04/2026", "07:30 - 09:10", "P.201", "PENDING"),
-                new SessionInfo("12/04/2026", "07:30 - 09:10", "P.201", "PENDING")
-            )
-        ));
+        // Try load subjects from DB; fallback to mock
+        java.util.List<java.util.Map<String,Object>> subs = database.ScheduleRepository.getInstance().findAllSubjects();
+        if (subs != null && !subs.isEmpty()) {
+            for (java.util.Map<String,Object> s : subs) {
+                String name = (String) s.getOrDefault("name", s.getOrDefault("subject", "Unnamed"));
+                String lecturer = (String) s.getOrDefault("lecturer", "");
+                int credits = 3;
+                int total = 15;
+                List<SessionInfo> sessions = new ArrayList<>();
+                subjectsData.put(name, new SubjectInfo(name, lecturer, credits, total, sessions));
+            }
+        } else {
+            // Mock data - replace with database
+            subjectsData.put("Lập trình mạng", new SubjectInfo(
+                    "Lập trình mạng", "TS. Nguyễn Văn A", 3, 15,
+                    Arrays.asList(
+                        new SessionInfo("15/03/2026", "07:30 - 09:10", "P.201", "ATTENDED"),
+                        new SessionInfo("22/03/2026", "07:30 - 09:10", "P.201", "ATTENDED"),
+                        new SessionInfo("29/03/2026", "07:30 - 09:10", "P.201", "ATTENDED"),
+                        new SessionInfo("05/04/2026", "07:30 - 09:10", "P.201", "PENDING"),
+                        new SessionInfo("12/04/2026", "07:30 - 09:10", "P.201", "PENDING")
+                    )
+            ));
 
-        subjectsData.put("Cơ sở dữ liệu", new SubjectInfo(
-            "Cơ sở dữ liệu", "TS. Trần Thị B", 3, 15,
-            Arrays.asList(
-                new SessionInfo("14/03/2026", "09:30 - 11:10", "P.305", "ATTENDED"),
-                new SessionInfo("21/03/2026", "09:30 - 11:10", "P.305", "ABSENT"),
-                new SessionInfo("28/03/2026", "09:30 - 11:10", "P.305", "ATTENDED")
-            )
-        ));
+            subjectsData.put("Cơ sở dữ liệu", new SubjectInfo(
+                    "Cơ sở dữ liệu", "TS. Trần Thị B", 3, 15,
+                    Arrays.asList(
+                        new SessionInfo("14/03/2026", "09:30 - 11:10", "P.305", "ATTENDED"),
+                        new SessionInfo("21/03/2026", "09:30 - 11:10", "P.305", "ABSENT"),
+                        new SessionInfo("28/03/2026", "09:30 - 11:10", "P.305", "ATTENDED")
+                    )
+            ));
 
-        subjectsData.put("Giải thuật", new SubjectInfo(
-            "Giải thuật", "ThS. Phạm Văn C", 3, 15,
-            Arrays.asList(
-                new SessionInfo("16/03/2026", "13:00 - 14:40", "P.401", "ATTENDED"),
-                new SessionInfo("23/03/2026", "13:00 - 14:40", "P.401", "ATTENDED"),
-                new SessionInfo("30/03/2026", "13:00 - 14:40", "P.401", "PENDING")
-            )
-        ));
+            subjectsData.put("Giải thuật", new SubjectInfo(
+                    "Giải thuật", "ThS. Phạm Văn C", 3, 15,
+                    Arrays.asList(
+                        new SessionInfo("16/03/2026", "13:00 - 14:40", "P.401", "ATTENDED"),
+                        new SessionInfo("23/03/2026", "13:00 - 14:40", "P.401", "ATTENDED"),
+                        new SessionInfo("30/03/2026", "13:00 - 14:40", "P.401", "PENDING")
+                    )
+            ));
+        }
 
         // Populate combo box
         cbSubjects.getItems().addAll(subjectsData.keySet());

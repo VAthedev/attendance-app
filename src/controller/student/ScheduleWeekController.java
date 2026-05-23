@@ -67,8 +67,34 @@ public class ScheduleWeekController implements Initializable {
             currentWeekStart.format(formatter),
             weekEnd.format(formatter)));
 
-        // Load data for all days in the week
-        Map<Integer, List<ScheduleInfo>> weekSchedules = getSchedulesForWeek(currentWeekStart, weekEnd);
+        // Load data for all days in the week (from DB)
+        Map<Integer, List<ScheduleInfo>> weekSchedules = new HashMap<>();
+        try {
+            java.util.List<java.util.Map<String,Object>> rows = database.ScheduleRepository.getInstance()
+                    .findSessionsInRange(currentWeekStart, weekEnd);
+            for (java.util.Map<String,Object> r : rows) {
+                String dateStr = (String) r.getOrDefault("date", "");
+                java.time.LocalDate date = null;
+                try { date = java.time.LocalDate.parse(dateStr); } catch (Exception ex) { continue; }
+                int day = date.get(java.time.temporal.ChronoField.DAY_OF_WEEK);
+                // Convert to 1..7 with Monday=1 mapping same as existing code
+                if (day == 7) day = 7; // Sunday remains 7
+                int idx = (day == 7) ? 7 : day; // 1..7
+
+                ScheduleInfo si = new ScheduleInfo(
+                        (String) r.getOrDefault("subject", ""),
+                        (String) r.getOrDefault("startTime", ""),
+                        (String) r.getOrDefault("endTime", ""),
+                        (String) r.getOrDefault("lecturer", ""),
+                        (String) r.getOrDefault("room", ""),
+                        (String) r.getOrDefault("className", ""),
+                        (String) r.getOrDefault("status", "PENDING")
+                );
+                weekSchedules.computeIfAbsent(idx, k -> new ArrayList<>()).add(si);
+            }
+        } catch (Exception ex) {
+            weekSchedules = getSchedulesForWeek(currentWeekStart, weekEnd);
+        }
         
         if (weekSchedules.isEmpty() || weekSchedules.values().stream().allMatch(List::isEmpty)) {
             weekGridContainer.setVisible(true);
