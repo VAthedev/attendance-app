@@ -1,11 +1,10 @@
 package server;
 
-import database.DatabaseHelper;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+
+import database.DatabaseHelper;
 
 public class Server {
 
@@ -13,11 +12,11 @@ public class Server {
     private static final int MAX_CLIENTS = 50;
 
     private ServerSocket serverSocket;
-    private ExecutorService threadPool;
+    private ThreadPoolManager threadPool;
     private boolean running = false;
 
     public Server() {
-        threadPool = Executors.newFixedThreadPool(MAX_CLIENTS);
+        threadPool = ThreadPoolManager.getInstance();
     }
 
     public void start() {
@@ -37,7 +36,8 @@ public class Server {
                 Socket clientSocket = serverSocket.accept();
                 // Thread pool giúp server xử lý được nhiều client cùng lúc
                 ClientHandler handler = new ClientHandler(clientSocket);
-                threadPool.execute(handler);
+                // Submit to centralized ThreadPoolManager (with monitoring)
+                threadPool.submitTask(handler);
             }
 
         } catch (IOException e) {

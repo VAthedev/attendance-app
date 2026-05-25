@@ -1,20 +1,26 @@
 package controller.student;
 
+import java.net.URL;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.ResourceBundle;
+
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Line;
-
-import java.net.URL;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.Label;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 
 public class ScheduleDayController implements Initializable {
 
@@ -55,35 +61,57 @@ public class ScheduleDayController implements Initializable {
 
     private void loadScheduleData() {
         scheduleTimelineBox.getChildren().clear();
-        
-        // Lấy dữ liệu lịch học cho ngày được chọn
-        List<ScheduleInfo> schedules = getSchedulesForDate(currentSelectedDate);
 
-        if (schedules.isEmpty()) {
-            emptyScheduleBox.setVisible(true);
-            emptyScheduleBox.setManaged(true);
-            updateStats(0, 0, 0, 0);
-            return;
-        }
+        // Load from DB in background thread
+        new Thread(() -> {
+            java.util.List<java.util.Map<String,Object>> rows = database.ScheduleRepository.getInstance()
+                    .findSessionsByDate(currentSelectedDate);
 
-        emptyScheduleBox.setVisible(false);
-        emptyScheduleBox.setManaged(false);
+            java.util.List<ScheduleInfo> schedules = new ArrayList<>();
+            for (java.util.Map<String,Object> r : rows) {
+                String subject = (String) r.getOrDefault("subject", "");
+                String start = (String) r.getOrDefault("startTime", "");
+                String end = (String) r.getOrDefault("endTime", "");
+                String lecturer = (String) r.getOrDefault("lecturer", "");
+                String room = (String) r.getOrDefault("room", "");
+                String className = (String) r.getOrDefault("className", "");
+                String status = (String) r.getOrDefault("status", "PENDING");
+                String attendanceTime = (String) r.getOrDefault("attendanceTime", "");
+                int minutesUntilStart = 0;
+                ScheduleInfo si = new ScheduleInfo(subject, start, end, lecturer, room, className, status, minutesUntilStart);
+                si.attendanceTime = attendanceTime;
+                schedules.add(si);
+            }
 
-        // Tính toán thống kê
-        int total = schedules.size();
-        int attended = (int) schedules.stream()
-                .filter(s -> s.status.equals("ATTENDED")).count();
-        int pending = (int) schedules.stream()
-                .filter(s -> s.status.equals("PENDING")).count();
-        int notAttended = total - attended;
+            // If DB returned nothing, fallback to existing mock
+            if (schedules.isEmpty()) {
+                schedules = getSchedulesForDate(currentSelectedDate);
+            }
 
-        updateStats(total, attended, pending, notAttended);
+            java.util.List<ScheduleInfo> finalSchedules = schedules;
+            javafx.application.Platform.runLater(() -> {
+                if (finalSchedules.isEmpty()) {
+                    emptyScheduleBox.setVisible(true);
+                    emptyScheduleBox.setManaged(true);
+                    updateStats(0, 0, 0, 0);
+                    return;
+                }
 
-        // Vẽ lịch trình
-        for (ScheduleInfo schedule : schedules) {
-            VBox scheduleItem = createScheduleItem(schedule);
-            scheduleTimelineBox.getChildren().add(scheduleItem);
-        }
+                emptyScheduleBox.setVisible(false);
+                emptyScheduleBox.setManaged(false);
+
+                int total = finalSchedules.size();
+                int attended = (int) finalSchedules.stream().filter(s -> s.status.equals("ATTENDED")).count();
+                int pending = (int) finalSchedules.stream().filter(s -> s.status.equals("PENDING")).count();
+                int notAttended = total - attended;
+                updateStats(total, attended, pending, notAttended);
+
+                for (ScheduleInfo schedule : finalSchedules) {
+                    VBox scheduleItem = createScheduleItem(schedule);
+                    scheduleTimelineBox.getChildren().add(scheduleItem);
+                }
+            });
+        }).start();
     }
 
     private VBox createScheduleItem(ScheduleInfo schedule) {

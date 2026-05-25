@@ -31,21 +31,22 @@ Neu muon doi URI ma khong sua code, set bien moi truong `ATTENDANCE_MONGODB_URI`
 3. Chay `Launch Client (JavaFX)`.
 
 ### Bang PowerShell
-Compile:
+Compile (khuyen dung Maven, vi pom.xml da co Apache POI + JavaFX):
 ```powershell
-$files = Get-ChildItem -Recurse src -Filter *.java | ForEach-Object { $_.FullName }
-javac -cp "lib\*" -d bin $files
+mvn -q -DskipTests compile
 ```
 
 Chay server:
 ```powershell
-java -cp "bin;lib\*" server.Server
+java -cp "target/classes;lib\*" server.Server
 ```
 
 Chay client:
 ```powershell
-java --module-path "lib\javafx-sdk-21\lib" --add-modules javafx.controls,javafx.fxml -cp "bin;lib\*" client.Main
+java --module-path "lib\javafx-sdk-21\lib" --add-modules javafx.controls,javafx.fxml -cp "target/classes;lib\*" client.Main
 ```
+
+Neu ban van muon dung `javac` thu cong, can bo sung them cac file jar Apache POI vao `lib/` (vi `javac` khong tu tai dependency tu `pom.xml`).
 
 ## Yeu cau
 - Java 21+

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+			fx:controller="controller.shared.ChatController"
+			stylesheets="@../../css/main.css"
+			style="-fx-background-color: #f8fafc;">
+
+	<top>
+		<VBox spacing="10" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 0 0 1 0;">
+			<padding><Insets top="18" right="24" bottom="18" left="24"/></padding>
+			<HBox spacing="12" alignment="CENTER_LEFT">
+				<VBox spacing="2" HBox.hgrow="ALWAYS">
+					<Label fx:id="lblRoomTitle" text="Chat lớp học" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #1a2744;"/>
+					<Label fx:id="lblRoomSubtitle" text="Chọn môn học để vào phòng chat" style="-fx-font-size: 12px; -fx-text-fill: #6b7a99;"/>
+				</VBox>
+				<HBox spacing="8" alignment="CENTER_RIGHT" style="-fx-background-color: #f8fafc; -fx-background-radius: 999; -fx-padding: 6 10 6 10; -fx-border-color: #dbe4f0; -fx-border-radius: 999; -fx-border-width: 1;">
+					<Label text="👤" style="-fx-font-size: 14px; -fx-text-fill: #1d4ed8;"/>
+					<Label fx:id="lblMiniUserName" text="Bạn" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #1f2937;"/>
+				</HBox>
+			</HBox>
+			<HBox spacing="12" alignment="CENTER_LEFT">
+				<Label text="Phòng:" style="-fx-font-size: 12px; -fx-text-fill: #475569; -fx-font-weight: bold;"/>
+				<ComboBox fx:id="cbRooms" prefWidth="320" promptText="Chọn môn học"/>
+				<Button text="Tải lại lịch sử" onAction="#onRefreshHistory" style="-fx-background-color: #e2e8f0; -fx-text-fill: #1a2744;"/>
+				<Label fx:id="lblStatus" text="Sẵn sàng" style="-fx-font-size: 12px; -fx-text-fill: #64748b;"/>
+			</HBox>
+		</VBox>
+	</top>
+
+	<center>
+		<VBox spacing="14">
+			<padding><Insets top="20" right="24" bottom="20" left="24"/></padding>
+
+			<VBox spacing="10" style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e2e8f0; -fx-border-radius: 10; -fx-border-width: 1;">
+				<padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+				<HBox spacing="10" alignment="CENTER_LEFT">
+					<Label text="Phòng hiện tại" style="-fx-font-size: 12px; -fx-text-fill: #6b7a99;"/>
+					<Label fx:id="lblCurrentRoom" text="Chưa chọn" style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2563eb;"/>
+				</HBox>
+
+				<ScrollPane fx:id="chatScrollPane" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+							style="-fx-background-color: #f8fafc; -fx-border-color: #dbe4f0; -fx-border-radius: 10; -fx-background-radius: 10;">
+					<VBox fx:id="messageListBox" spacing="12" style="-fx-padding: 6 2 6 2;"/>
+				</ScrollPane>
+
+				<HBox spacing="10" alignment="CENTER_LEFT">
+					<TextField fx:id="messageField"
+							   HBox.hgrow="ALWAYS"
+							   promptText="Nhập tin nhắn..."/>
+					<Button fx:id="sendButton"
+							text="Gửi"
+							onAction="#onSend"
+							style="-fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-weight: bold;"/>
+				</HBox>
+			</VBox>
+
+			<VBox spacing="8" style="-fx-background-color: #eef2ff; -fx-background-radius: 10; -fx-padding: 14; -fx-border-radius: 10; -fx-border-color: #c7d2fe; -fx-border-width: 1;">
+				<Label text="Hướng dẫn" style="-fx-font-weight: bold; -fx-text-fill: #1e3a8a;"/>
+				<Label text="• Mỗi môn học là một phòng chat riêng." style="-fx-text-fill: #334155; -fx-font-size: 12px;"/>
+				<Label text="• Lịch sử được nạp cho 30 ngày gần nhất của phòng đang chọn." style="-fx-text-fill: #334155; -fx-font-size: 12px;"/>
+				<Label text="• Tin nhắn mới sẽ được broadcast realtime tới các client cùng phòng." style="-fx-text-fill: #334155; -fx-font-size: 12px;"/>
+			</VBox>
+		</VBox>
+	</center>
+
+</BorderPane>
