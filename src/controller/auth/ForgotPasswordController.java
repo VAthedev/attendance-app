@@ -11,8 +11,14 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import util.FxmlUtil;
+import client.network.SocketClient;
+import protocol.Request;
+import protocol.RequestType;
+import protocol.Response;
+import security.SHA256Util;
 
 import java.net.URL;
+import java.util.Map;
 import java.util.ResourceBundle;
 
 public class ForgotPasswordController implements Initializable {
@@ -43,7 +49,8 @@ public class ForgotPasswordController implements Initializable {
     @FXML private VBox paneSuccess;
 
     private Timeline countdownTimer;
-    private int countdownSeconds = 300; // 5 phut
+    private int countdownSeconds = 300;
+    private String currentEmail; // lưu email qua các bước
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -51,7 +58,7 @@ public class ForgotPasswordController implements Initializable {
         showStep(1);
     }
 
-    // ===== BUOC 1: GUI OTP =====
+    // ===== BUOC 1: GỬI OTP =====
     @FXML
     private void handleSendOTP() {
         String email = txtEmail.getText().trim();
@@ -62,16 +69,19 @@ public class ForgotPasswordController implements Initializable {
 
         btnSendOTP.setDisable(true);
         btnSendOTP.setText("Đang gửi...");
+        lblError1.setText("");
 
-        // TODO: Gui qua TCP Socket
-        // protocol.Request req = new protocol.Request("FORGOT_PASSWORD", Map.of("email", email));
-        // client.network.SocketClient.getInstance().send(req, response -> {
-        //     if ("OK".equals(response.getStatus())) { goToStep2(email); }
-        //     else lblError1.setText(response.getMessage());
-        // });
-
-        // Demo tam thoi
-        goToStep2(email);
+        Request req = new Request(RequestType.FORGOT_PASSWORD, Map.of("email", email));
+        SocketClient.getInstance().sendAsync(req, response -> {
+            if (response.isOk()) {
+                currentEmail = email;
+                goToStep2(email);
+            } else {
+                lblError1.setText(response.getMessage());
+                btnSendOTP.setDisable(false);
+                btnSendOTP.setText("Gửi mã OTP");
+            }
+        });
     }
 
     private void goToStep2(String email) {
@@ -82,7 +92,7 @@ public class ForgotPasswordController implements Initializable {
         btnSendOTP.setText("Gửi mã OTP");
     }
 
-    // ===== BUOC 2: XAC NHAN OTP =====
+    // ===== BUOC 2: XÁC NHẬN OTP =====
     @FXML
     private void handleVerifyOTP() {
         String otp = otp1.getText() + otp2.getText() + otp3.getText()
@@ -95,28 +105,36 @@ public class ForgotPasswordController implements Initializable {
 
         btnVerifyOTP.setDisable(true);
         btnVerifyOTP.setText("Đang xác nhận...");
+        lblError2.setText("");
 
-        // TODO: Gui qua TCP Socket
-        // protocol.Request req = new protocol.Request("VERIFY_OTP", Map.of("otp", otp));
-        // ...
-
-        // Demo: OTP la "123456"
-        if (otp.equals("123456")) {
-            stopCountdown();
-            showStep(3);
-        } else {
-            lblError2.setText("Mã OTP không đúng. Vui lòng thử lại.");
-        }
-        btnVerifyOTP.setDisable(false);
-        btnVerifyOTP.setText("Xác nhận OTP");
+        Request req = new Request(RequestType.VERIFY_OTP, Map.of("email", currentEmail, "otp", otp));
+        SocketClient.getInstance().sendAsync(req, response -> {
+            if (response.isOk()) {
+                stopCountdown();
+                showStep(3);
+            } else {
+                lblError2.setText(response.getMessage());
+            }
+            btnVerifyOTP.setDisable(false);
+            btnVerifyOTP.setText("Xác nhận OTP");
+        });
     }
 
     @FXML
     private void handleResendOTP() {
-        countdownSeconds = 300;
-        startCountdown();
-        // TODO: Gui lai OTP qua socket
+        if (currentEmail == null) return;
         lblError2.setText("");
+        clearOTPFields();
+
+        Request req = new Request(RequestType.FORGOT_PASSWORD, Map.of("email", currentEmail));
+        SocketClient.getInstance().sendAsync(req, response -> {
+            if (response.isOk()) {
+                countdownSeconds = 300;
+                startCountdown();
+            } else {
+                lblError2.setText(response.getMessage());
+            }
+        });
     }
 
     @FXML
@@ -127,10 +145,10 @@ public class ForgotPasswordController implements Initializable {
         showStep(1);
     }
 
-    // ===== BUOC 3: DAT MAT KHAU MOI =====
+    // ===== BUOC 3: ĐẶT MẬT KHẨU MỚI =====
     @FXML
     private void handleResetPassword() {
-        String newPw  = txtNewPassword.getText();
+        String newPw   = txtNewPassword.getText();
         String confirm = txtConfirmPassword.getText();
 
         if (newPw.length() < 8) { lblError3.setText("Mật khẩu phải tối thiểu 8 ký tự."); return; }
@@ -138,17 +156,24 @@ public class ForgotPasswordController implements Initializable {
 
         btnResetPassword.setDisable(true);
         btnResetPassword.setText("Đang cập nhật...");
+        lblError3.setText("");
 
-        // TODO: Gui qua TCP Socket
-        // String hashedPw = security.SHA256Util.hash(newPw);
-        // protocol.Request req = new protocol.Request("RESET_PASSWORD", Map.of("password", hashedPw));
-        // ...
+        String hashedPw = SHA256Util.hash(newPw);
+        Request req = new Request(RequestType.RESET_PASSWORD,
+                Map.of("email", currentEmail, "password", hashedPw));
 
-        // Demo tam thoi
-        showStep(4);
+        SocketClient.getInstance().sendAsync(req, response -> {
+            if (response.isOk()) {
+                showStep(4);
+            } else {
+                lblError3.setText(response.getMessage());
+                btnResetPassword.setDisable(false);
+                btnResetPassword.setText("Cập nhật mật khẩu");
+            }
+        });
     }
 
-    @FXML private void goToLogin() { loadScene("/fxml/auth/Login.fxml", "Dang nhap"); }
+    @FXML private void goToLogin() { loadScene("/fxml/auth/Login.fxml", "Đăng nhập"); }
 
     // ===== HELPER =====
 
@@ -162,9 +187,8 @@ public class ForgotPasswordController implements Initializable {
     private void setupOTPFields() {
         TextField[] fields = {otp1, otp2, otp3, otp4, otp5, otp6};
         for (int i = 0; i < fields.length; i++) {
-            final int next = i + 1;
-            final TextField current = fields[i];
-            final TextField nextField = (next < fields.length) ? fields[next] : null;
+            final TextField current  = fields[i];
+            final TextField nextField = (i + 1 < fields.length) ? fields[i + 1] : null;
             current.textProperty().addListener((obs, ov, nv) -> {
                 if (nv.length() > 1) current.setText(nv.substring(0, 1));
                 if (nv.length() == 1 && nextField != null) nextField.requestFocus();
@@ -173,12 +197,8 @@ public class ForgotPasswordController implements Initializable {
     }
 
     private void clearOTPFields() {
-        otp1.clear();
-        otp2.clear();
-        otp3.clear();
-        otp4.clear();
-        otp5.clear();
-        otp6.clear();
+        otp1.clear(); otp2.clear(); otp3.clear();
+        otp4.clear(); otp5.clear(); otp6.clear();
     }
 
     private void startCountdown() {
