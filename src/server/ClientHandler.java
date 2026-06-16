@@ -155,16 +155,21 @@ public class ClientHandler implements Runnable {
         if (email == null || email.isBlank())
             return Response.error("Thiếu email.");
 
+        System.out.println("[OTP Trace] 1. Bắt đầu tìm user trong MongoDB...");
         UserRepository repo = new UserRepository();
         User user = repo.findByEmail(email);
-        if (user == null)
+        if (user == null) {
+            System.out.println("[OTP Trace] Không tìm thấy user với email: " + email);
             return Response.error("Email không tồn tại trong hệ thống.");
+        }
 
+        System.out.println("[OTP Trace] 2. Đã tìm thấy user, chuẩn bị gửi OTP qua Email...");
         String otp = SHA256Util.generateOTP();
         otpStore.put(email, otp);
 
         try {
             service.EmailService.getInstance().sendOTP(email, otp);
+            System.out.println("[OTP Trace] 3. Đã gửi OTP thành công qua Email!");
         } catch (Exception e) {
             System.err.println("[Handler] Lỗi gửi email: " + e.getMessage());
             return Response.error("Không thể gửi email. Vui lòng thử lại.");

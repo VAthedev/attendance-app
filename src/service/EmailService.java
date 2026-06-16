@@ -28,6 +28,9 @@ public class EmailService {
         props.put("mail.smtp.host", SMTP_HOST);
         props.put("mail.smtp.port", String.valueOf(SMTP_PORT));
         props.put("mail.smtp.ssl.trust", SMTP_HOST);
+        props.put("mail.smtp.connectiontimeout", "15000"); // 15 seconds
+        props.put("mail.smtp.timeout", "15000"); // 15 seconds
+        props.put("mail.smtp.writetimeout", "15000"); // 15 seconds
 
         Session session = Session.getInstance(props, new Authenticator() {
             @Override

@@ -158,9 +158,8 @@ public class ForgotPasswordController implements Initializable {
         btnResetPassword.setText("Đang cập nhật...");
         lblError3.setText("");
 
-        String hashedPw = SHA256Util.hash(newPw);
         Request req = new Request(RequestType.RESET_PASSWORD,
-                Map.of("email", currentEmail, "password", hashedPw));
+                Map.of("email", currentEmail, "password", newPw));
 
         SocketClient.getInstance().sendAsync(req, response -> {
             if (response.isOk()) {
