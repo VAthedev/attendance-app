@@ -85,6 +85,10 @@ public class ClientHandler implements Runnable {
                     return Response.ok("pong");
                 case SYNC_SCHEDULE:
                     return handleSyncSchedule(req);
+                case OPEN_SESSION:
+                    return handleOpenSession(req);
+                case CLOSE_SESSION:
+                    return handleCloseSession(req);
                 default:
                     return Response.error("Chua ho tro: " + req.getType());
             }
@@ -290,6 +294,58 @@ public class ClientHandler implements Runnable {
         if (text == null)
             return "";
         return text.replace("|", "\\|").replace("\n", " ").replace("\r", " ");
+    }
+
+    private Response handleOpenSession(Request req) {
+        if (userId == null) {
+            return Response.error("Chưa đăng nhập.");
+        }
+        
+        try {
+            org.bson.Document sessionDoc = new org.bson.Document();
+            sessionDoc.put("lecturer_id", userId);
+            sessionDoc.put("class_name", req.getPayloadValue("class_name"));
+            sessionDoc.put("subject", req.getPayloadValue("subject"));
+            
+            int duration = Integer.parseInt(req.getPayloadValue("duration")); // minutes
+            sessionDoc.put("duration", duration);
+            
+            long startTime = System.currentTimeMillis();
+            sessionDoc.put("start_time", startTime);
+            sessionDoc.put("end_time", startTime + (duration * 60L * 1000L));
+            
+            sessionDoc.put("room", req.getPayloadValue("room"));
+            sessionDoc.put("gps_enabled", Boolean.parseBoolean(req.getPayloadValue("gps_enabled")));
+            sessionDoc.put("wifi_enabled", Boolean.parseBoolean(req.getPayloadValue("wifi_enabled")));
+            sessionDoc.put("gps_lat", req.getPayloadValue("gps_lat"));
+            sessionDoc.put("gps_lng", req.getPayloadValue("gps_lng"));
+            sessionDoc.put("gps_radius", req.getPayloadValue("gps_radius"));
+            sessionDoc.put("wifi_bssid", req.getPayloadValue("wifi_bssid"));
+            
+            String sessionId = database.SessionRepository.getInstance().openSession(sessionDoc);
+            
+            Response res = Response.ok("Mở phiên điểm danh thành công.");
+            res.putPayload("session_id", sessionId);
+            return res;
+        } catch (Exception e) {
+            return Response.error("Lỗi khi mở phiên: " + e.getMessage());
+        }
+    }
+
+    private Response handleCloseSession(Request req) {
+        if (userId == null) {
+            return Response.error("Chưa đăng nhập.");
+        }
+        String sessionId = req.getPayloadValue("session_id");
+        if (sessionId == null) {
+            return Response.error("Thiếu session_id.");
+        }
+        boolean success = database.SessionRepository.getInstance().closeSession(sessionId);
+        if (success) {
+            return Response.ok("Đã đóng phiên điểm danh.");
+        } else {
+            return Response.error("Không thể đóng phiên (không tồn tại hoặc đã đóng).");
+        }
     }
 
     private Response handleSyncSchedule(Request req) {

@@ -80,6 +80,10 @@ public class Request {
         return v != null ? v.toString() : null;
     }
 
+    public void putPayload(String key, Object value) {
+        this.payload.put(key, value);
+    }
+
     // ===== HELPER =====
     private static String escapeJson(String s) {
         if (s == null) return "";

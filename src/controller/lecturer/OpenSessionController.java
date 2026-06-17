@@ -41,7 +41,7 @@ public class OpenSessionController implements Initializable {
 
     private Timeline countdownTimer;
     private int remainingSeconds = 0;
-    private int currentSessionId = -1;
+    private String currentSessionId = null;
     private ClassInfo selectedClass;
 
     @Override
@@ -165,15 +165,35 @@ public class OpenSessionController implements Initializable {
         lblError.setText("");
         btnOpenSession.setDisable(true);
 
-        // TODO: Send OPEN_SESSION request to server
-        // For now, start countdown demo
         int duration = spDuration.getValue();
-        startCountdown(duration);
+        
+        protocol.Request req = new protocol.Request(protocol.RequestType.OPEN_SESSION);
+        req.putPayload("class_name", selectedClass.className);
+        req.putPayload("subject", selectedClass.subject);
+        req.putPayload("duration", String.valueOf(duration));
+        req.putPayload("room", tfRoom.getText().trim());
+        req.putPayload("gps_enabled", String.valueOf(cbGPS.isSelected()));
+        req.putPayload("wifi_enabled", String.valueOf(cbWiFi.isSelected()));
+        req.putPayload("gps_lat", cbGPS.isSelected() ? txtLat.getText().trim() : "");
+        req.putPayload("gps_lng", cbGPS.isSelected() ? txtLng.getText().trim() : "");
+        req.putPayload("gps_radius", cbGPS.isSelected() ? txtRadius.getText().trim() : "100");
+        req.putPayload("wifi_bssid", cbWiFi.isSelected() ? txtBSSID.getText().trim() : "");
+
+        client.network.SocketClient.getInstance().sendAsync(req, res -> {
+            javafx.application.Platform.runLater(() -> {
+                if (res.isOk()) {
+                    currentSessionId = res.getDataValue("session_id");
+                    startCountdown(duration);
+                } else {
+                    showError(res.getMessage());
+                    btnOpenSession.setDisable(false);
+                }
+            });
+        });
     }
 
     private void startCountdown(int minutes) {
         remainingSeconds = minutes * 60;
-        currentSessionId = 1;
 
         // Update preview to show active session
         lblSessionSubject.setText(selectedClass.subject);
@@ -207,7 +227,6 @@ public class OpenSessionController implements Initializable {
     @FXML
     public void handleCloseSession() {
         stopCountdown("Phiên đã đóng sớm.", false);
-        // TODO: Send CLOSE_SESSION request to server
     }
 
     @FXML
@@ -254,7 +273,17 @@ public class OpenSessionController implements Initializable {
 
         btnOpenSession.setDisable(false);
         btnOpenSession.setText("🚀  Mở phiên điểm danh");
-        currentSessionId = -1;
+        
+        if (currentSessionId != null) {
+            protocol.Request req = new protocol.Request(protocol.RequestType.CLOSE_SESSION);
+            req.putPayload("session_id", currentSessionId);
+            client.network.SocketClient.getInstance().sendAsync(req, res -> {
+                if (!res.isOk()) {
+                    System.err.println("Lỗi đóng phiên trên server: " + res.getMessage());
+                }
+            });
+            currentSessionId = null;
+        }
     }
 
     private void showError(String msg) {
