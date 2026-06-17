@@ -41,6 +41,7 @@ public class StudentDashboardController implements Initializable {
     @FXML private StackPane contentArea;
 
     private Node currentSubPane = null;
+    public static String currentStudentId = "";
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -48,29 +49,75 @@ public class StudentDashboardController implements Initializable {
             DateTimeFormatter.ofPattern("EEEE, dd/MM/yyyy",
             new java.util.Locale("vi", "VN")));
         lblPageDate.setText(today);
-        loadDashboardData();
     }
 
     public void setUserInfo(String fullName, String studentId, String token) {
         lblUserName.setText(fullName.isEmpty() ? "Sinh vien" : fullName);
         lblUserId.setText("MSSV: " + studentId);
+        currentStudentId = studentId;
+        // Đăng ký PushListener để nhận thông báo thời gian thực
+        client.network.SocketClient.getInstance().addPushListener(res -> {
+            if ("ANNOUNCEMENT".equals(res.getMessage()) && "SCHEDULE_UPDATED".equals(res.getDataValue("message"))) {
+                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                alert.setTitle("Thông báo");
+                alert.setHeaderText("Đồng bộ Thời khóa biểu");
+                alert.setContentText("Thời khóa biểu đã có sự thay đổi. Vui lòng làm mới trang.");
+                alert.show();
+                loadDashboardData(studentId);
+            }
+        });
+
+        loadDashboardData(studentId);
     }
 
-    private void loadDashboardData() {
-        lblTotalSubjects.setText("4");
-        lblAttendanceRate.setText("87%");
-        lblAbsentCount.setText("2");
-        lblLateCount.setText("1");
-
-        addScheduleItem("Lập trình mạng", "07:30 - 09:10", "P.201");
-        addScheduleItem("Cơ sở dữ liệu",  "09:30 - 11:10", "P.305");
-
-        addAttendanceItem("Lập trình mạng", "16/03/2026", "PRESENT");
-        addAttendanceItem("Cơ sở dữ liệu",  "15/03/2026", "LATE");
-        addAttendanceItem("Giải thuật",      "14/03/2026", "ABSENT");
-
-        addNotificationItem("⚠️ Cảnh báo vắng học", "Môn Giải thuật: bạn đã vắng 3/10 buổi");
-        addNotificationItem("📅 Thay đổi lịch học", "Môn CSDL dời sang thứ 4 tuần tới");
+    private void loadDashboardData(String studentId) {
+        new Thread(() -> {
+            try {
+                java.time.LocalDate today = java.time.LocalDate.now();
+                java.util.List<java.util.Map<String,Object>> allSchedules = database.ScheduleRepository.getInstance()
+                        .findStudentSchedulesInRange(studentId, today.minusWeeks(2), today.plusWeeks(10));
+                
+                long subjectCount = allSchedules.stream().map(s -> s.get("subject")).distinct().count();
+                
+                java.util.List<java.util.Map<String,Object>> todaySchedules = database.ScheduleRepository.getInstance()
+                        .findStudentSchedulesByDate(studentId, today);
+                
+                javafx.application.Platform.runLater(() -> {
+                    lblTotalSubjects.setText(String.valueOf(subjectCount));
+                    
+                    lblAttendanceRate.setText("100%");
+                    lblAbsentCount.setText("0");
+                    lblLateCount.setText("0");
+                    
+                    boxTodaySchedule.getChildren().clear();
+                    if (todaySchedules.isEmpty()) {
+                        lblNoSchedule.setVisible(true);
+                        lblNoSchedule.setManaged(true);
+                    } else {
+                        lblNoSchedule.setVisible(false);
+                        lblNoSchedule.setManaged(false);
+                        for (java.util.Map<String,Object> s : todaySchedules) {
+                            String subject = (String) s.getOrDefault("subject", "Unnamed");
+                            String time = s.get("startTime") + " - " + s.get("endTime");
+                            String room = (String) s.getOrDefault("room", "");
+                            addScheduleItem(subject, time, room);
+                        }
+                    }
+                    
+                    boxRecentAttendance.getChildren().clear();
+                    boxNotifications.getChildren().clear();
+                    
+                    if (lblNoAttendance != null) {
+                        lblNoAttendance.setVisible(true);
+                        lblNoAttendance.setManaged(true);
+                    }
+                    if (lblNoNotif != null) {
+                        lblNoNotif.setVisible(true);
+                        lblNoNotif.setManaged(true);
+                    }
+                });
+            } catch(Exception e) { e.printStackTrace(); }
+        }).start();
     }
 
     private void addScheduleItem(String subject, String time, String room) {

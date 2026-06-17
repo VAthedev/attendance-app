@@ -75,6 +75,8 @@
                     <Label fx:id="lblPageTitle" text="Tổng quan" styleClass="page-title"/>
                     <Label fx:id="lblPageDate"  text=""           styleClass="page-date"/>
                 </VBox>
+                <Button fx:id="btnSyncTKB" text="🔄  Đồng bộ TKB"
+                        styleClass="btn-secondary" onAction="#handleSyncTKB"/>
                 <Button fx:id="btnQuickOpen" text="▶  Mở điểm danh nhanh"
                         styleClass="btn-primary" onAction="#showOpenSession"/>
             </HBox>

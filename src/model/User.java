@@ -11,6 +11,8 @@ public class User {
     private String deviceId;
     private String sessionToken;
 
+    private boolean requirePasswordChange;
+
     public User() {}
 
     // Getters
@@ -22,6 +24,7 @@ public class User {
     public String getStudentId()    { return studentId; }
     public String getDeviceId()     { return deviceId; }
     public String getSessionToken() { return sessionToken; }
+    public boolean isRequirePasswordChange() { return requirePasswordChange; }
 
     public boolean isLecturer()     { return "LECTURER".equals(role); }
     public boolean isStudent()      { return "STUDENT".equals(role); }
@@ -35,6 +38,7 @@ public class User {
     public void setStudentId(String studentId)     { this.studentId = studentId; }
     public void setDeviceId(String deviceId)       { this.deviceId = deviceId; }
     public void setSessionToken(String token)      { this.sessionToken = token; }
+    public void setRequirePasswordChange(boolean requirePasswordChange) { this.requirePasswordChange = requirePasswordChange; }
 
     @Override
     public String toString() {

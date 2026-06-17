@@ -26,7 +26,8 @@ public class ScheduleWeekController implements Initializable {
 
     @FXML private Label lblWeekRange;
     @FXML private Label lblTotalClassWeek, lblAttendedWeek, lblPendingWeek, lblMissedWeek;
-    @FXML private VBox weekGridDays, weekListBox, weekGridContainer, weekListContainer, emptyWeekBox;
+    @FXML private HBox weekGridDays;
+    @FXML private VBox weekListBox, weekGridContainer, weekListContainer, emptyWeekBox;
     @FXML private ToggleGroup viewModeGroup;
 
     private LocalDate currentWeekStart;
@@ -70,8 +71,9 @@ public class ScheduleWeekController implements Initializable {
         // Load data for all days in the week (from DB)
         Map<Integer, List<ScheduleInfo>> weekSchedules = new HashMap<>();
         try {
+            String sid = StudentDashboardController.currentStudentId;
             java.util.List<java.util.Map<String,Object>> rows = database.ScheduleRepository.getInstance()
-                    .findSessionsInRange(currentWeekStart, weekEnd);
+                    .findStudentSchedulesInRange(sid, currentWeekStart, weekEnd);
             for (java.util.Map<String,Object> r : rows) {
                 String dateStr = (String) r.getOrDefault("date", "");
                 java.time.LocalDate date = null;
@@ -93,7 +95,7 @@ public class ScheduleWeekController implements Initializable {
                 weekSchedules.computeIfAbsent(idx, k -> new ArrayList<>()).add(si);
             }
         } catch (Exception ex) {
-            weekSchedules = getSchedulesForWeek(currentWeekStart, weekEnd);
+            ex.printStackTrace();
         }
         
         if (weekSchedules.isEmpty() || weekSchedules.values().stream().allMatch(List::isEmpty)) {

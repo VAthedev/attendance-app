@@ -83,6 +83,8 @@ public class ClientHandler implements Runnable {
                     return handleGetChatHistory(req);
                 case PING:
                     return Response.ok("pong");
+                case SYNC_SCHEDULE:
+                    return handleSyncSchedule(req);
                 default:
                     return Response.error("Chua ho tro: " + req.getType());
             }
@@ -117,6 +119,7 @@ public class ClientHandler implements Runnable {
         data.put("username", user.getUsername());
         data.put("fullName", user.getFullName() != null ? user.getFullName() : "");
         data.put("studentId", user.getStudentId() != null ? user.getStudentId() : "");
+        data.put("requirePasswordChange", user.isRequirePasswordChange());
 
         // Lưu userId để đăng ký writer cho notifications/broadcast
         this.userId = String.valueOf(user.getId());
@@ -196,12 +199,19 @@ public class ClientHandler implements Runnable {
 
     private Response handleResetPassword(Request req) throws SQLException {
         String email = req.getPayloadValue("email");
+        String username = req.getPayloadValue("username");
         String password = req.getPayloadValue("password");
-        if (email == null || password == null)
+        if ((email == null && username == null) || password == null)
             return Response.error("Thieu thong tin.");
 
         UserRepository repo = new UserRepository();
-        boolean ok = repo.updatePassword(email, password);
+        boolean ok = false;
+        if (email != null && !email.isBlank()) {
+            ok = repo.updatePassword(email, password);
+        } else if (username != null && !username.isBlank()) {
+            ok = repo.updatePasswordByUsername(username, password);
+        }
+        
         return ok ? Response.ok("Cap nhat mat khau thanh cong.")
                 : Response.error("Khong tim thay tai khoan.");
     }
@@ -280,6 +290,12 @@ public class ClientHandler implements Runnable {
         if (text == null)
             return "";
         return text.replace("|", "\\|").replace("\n", " ").replace("\r", " ");
+    }
+
+    private Response handleSyncSchedule(Request req) {
+        System.out.println("[ClientHandler] Yêu cầu đồng bộ TKB từ " + userId);
+        BroadcastManager.getInstance().broadcastAnnouncement("SCHEDULE_UPDATED");
+        return Response.ok("Yêu cầu đồng bộ TKB đã được phát đi.");
     }
 
     private void close() {

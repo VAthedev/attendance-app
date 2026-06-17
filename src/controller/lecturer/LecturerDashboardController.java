@@ -57,6 +57,33 @@ public class LecturerDashboardController implements Initializable {
         this.sessionToken = token;
         lblUserName.setText(fullName.isEmpty() ? "Giang vien" : fullName);
         lblUserCode.setText("Ma GV: " + userCode);
+
+        // Đăng ký PushListener để nhận thông báo thời gian thực
+        client.network.SocketClient.getInstance().addPushListener(res -> {
+            if ("ANNOUNCEMENT".equals(res.getMessage()) && "SCHEDULE_UPDATED".equals(res.getDataValue("message"))) {
+                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                alert.setTitle("Thông báo");
+                alert.setHeaderText("Đồng bộ Thời khóa biểu");
+                alert.setContentText("Thời khóa biểu đã có sự thay đổi. Vui lòng làm mới trang.");
+                alert.show();
+                loadDashboardData();
+            }
+        });
+    }
+
+    @FXML
+    private void handleSyncTKB(javafx.event.ActionEvent event) {
+        protocol.Request req = new protocol.Request(protocol.RequestType.SYNC_SCHEDULE);
+        client.network.SocketClient.getInstance().sendAsync(req, res -> {
+            if (res.isOk()) {
+                System.out.println("Gửi yêu cầu đồng bộ thành công.");
+            } else {
+                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+                alert.setTitle("Lỗi");
+                alert.setContentText(res.getMessage());
+                alert.show();
+            }
+        });
     }
 
     private void loadDashboardData() {

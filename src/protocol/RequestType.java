@@ -13,6 +13,7 @@ public enum RequestType {
     GET_SCHEDULE_BY_DAY,
     GET_SCHEDULE_BY_WEEK,
     GET_SCHEDULE_BY_SUBJECT,
+    SYNC_SCHEDULE,
 
     // Diem danh
     OPEN_SESSION,
