@@ -35,7 +35,7 @@ public class AttendanceRepository {
 	public boolean insert(Document attendance) {
 		validateReferences(attendance);
 
-		if (attendance.getString("_id") == null) {
+		if (attendance.get("_id") == null) {
 			attendance.put("_id", new ObjectId().toHexString());
 		}
 

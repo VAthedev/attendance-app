@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
+
+<ScrollPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="controller.student.NotificationController"
+            fitToWidth="true" styleClass="scroll-transparent"
+            stylesheets="@../../css/main.css">
+
+    <VBox spacing="20">
+        <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
+
+        <!-- Header -->
+        <VBox styleClass="dashboard-card" spacing="10">
+            <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="15">
+                <Label text="🔔" style="-fx-font-size: 32px;"/>
+                <VBox>
+                    <Label text="THÔNG BÁO CỦA BẠN" styleClass="card-title"/>
+                    <Label text="Cập nhật các thông tin mới nhất từ hệ thống" styleClass="form-subtitle"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="btnMarkAllRead" text="Đánh dấu tất cả đã đọc ✓" styleClass="btn-outline" onAction="#handleMarkAllRead"/>
+            </HBox>
+        </VBox>
+
+        <!-- Loading indicator -->
+        <VBox fx:id="boxLoading" alignment="CENTER" spacing="10" managed="false" visible="false">
+            <padding><Insets top="40" bottom="40"/></padding>
+            <ProgressIndicator />
+            <Label text="Đang tải thông báo..." styleClass="form-subtitle"/>
+        </VBox>
+
+        <!-- Empty state -->
+        <VBox fx:id="boxEmpty" alignment="CENTER" spacing="15" managed="false" visible="false">
+            <padding><Insets top="60" bottom="60"/></padding>
+            <Label text="🎉" style="-fx-font-size: 48px;"/>
+            <Label text="Bạn không có thông báo nào!" styleClass="card-title" style="-fx-text-fill: #7f8c8d;"/>
+            <Label text="Khi có cập nhật mới, chúng sẽ hiển thị ở đây." styleClass="form-subtitle"/>
+        </VBox>
+
+        <!-- List of Notifications -->
+        <VBox fx:id="vboxNotifications" spacing="12">
+            <!-- Items will be injected dynamically -->
+        </VBox>
+
+    </VBox>
+</ScrollPane>

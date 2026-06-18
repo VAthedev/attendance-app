@@ -15,6 +15,11 @@ public class Attendance {
     private String location; // GPS coordinates or WiFi SSID
     private String notes;
     private LocalTime createdAt;
+    
+    // Additional fields for displaying
+    private String subjectName;
+    private String timeString;
+    private String room;
 
     public Attendance() {
     }
@@ -71,6 +76,18 @@ public class Attendance {
         return createdAt;
     }
 
+    public String getSubjectName() {
+        return subjectName;
+    }
+
+    public String getTimeString() {
+        return timeString;
+    }
+
+    public String getRoom() {
+        return room;
+    }
+
     // Setters
     public void setId(int id) {
         this.id = id;
@@ -110,6 +127,18 @@ public class Attendance {
 
     public void setCreatedAt(LocalTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public void setSubjectName(String subjectName) {
+        this.subjectName = subjectName;
+    }
+
+    public void setTimeString(String timeString) {
+        this.timeString = timeString;
+    }
+
+    public void setRoom(String room) {
+        this.room = room;
     }
 
     @Override

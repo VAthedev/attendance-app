@@ -11,8 +11,12 @@ import protocol.Response;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import database.SessionRepository;
 
 public class AttendanceService {
 
@@ -35,17 +39,64 @@ public class AttendanceService {
      */
     private List<Attendance> convertDocumentsToAttendance(List<Document> docs) {
         List<Attendance> attendances = new ArrayList<>();
+        SessionRepository sessionRepo = SessionRepository.getInstance();
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+
         for (Document doc : docs) {
             Attendance att = new Attendance();
-            att.setId(doc.getString("_id").hashCode());
-            att.setUserId(doc.getString("student_id").hashCode());
-            att.setScheduleId(doc.getString("session_id").hashCode());
+            
+            Object idObj = doc.get("_id");
+            att.setId(idObj != null ? idObj.toString().hashCode() : 0);
+            
+            Object studentIdObj = doc.get("student_id");
+            att.setUserId(studentIdObj != null ? studentIdObj.toString().hashCode() : 0);
+            
+            String sessionId = doc.getString("session_id");
+            if (sessionId != null) {
+                att.setScheduleId(sessionId.hashCode());
+                
+                // Fetch session
+                Document sessionDoc = sessionRepo.findById(sessionId);
+                if (sessionDoc != null) {
+                    att.setSubjectName(sessionDoc.getString("subject"));
+                    att.setRoom(sessionDoc.getString("room"));
+                    
+                    Long startTimeMs = sessionDoc.getLong("start_time");
+                    Long endTimeMs = sessionDoc.getLong("end_time");
+                    if (startTimeMs != null) {
+                        Instant instant = Instant.ofEpochMilli(startTimeMs);
+                        LocalDate date = instant.atZone(ZoneId.systemDefault()).toLocalDate();
+                        LocalTime time = instant.atZone(ZoneId.systemDefault()).toLocalTime();
+                        att.setAttendanceDate(date);
+                        
+                        String tString = time.format(timeFormatter);
+                        if (endTimeMs != null) {
+                            LocalTime eTime = Instant.ofEpochMilli(endTimeMs).atZone(ZoneId.systemDefault()).toLocalTime();
+                            tString += " - " + eTime.format(timeFormatter);
+                        }
+                        att.setTimeString(tString);
+                    }
+                }
+            }
+            
             att.setStatus(doc.getString("status"));
             att.setMethod(doc.getString("method"));
-            att.setLocation(doc.getString("location"));
+            
+            String location = doc.getString("location");
+            att.setLocation(location != null ? location : "");
             att.setNotes(doc.getString("notes"));
+            
             attendances.add(att);
         }
+        
+        // Sắp xếp giảm dần theo ngày
+        attendances.sort((a, b) -> {
+            if (a.getAttendanceDate() == null && b.getAttendanceDate() == null) return 0;
+            if (a.getAttendanceDate() == null) return 1;
+            if (b.getAttendanceDate() == null) return -1;
+            return b.getAttendanceDate().compareTo(a.getAttendanceDate());
+        });
+        
         return attendances;
     }
 

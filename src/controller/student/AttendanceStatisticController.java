@@ -166,7 +166,49 @@ public class AttendanceStatisticController implements Initializable {
     private void loadStatistics() {
         new Thread(() -> {
             try {
-                List<SubjectStatisticRecord> records = generateMockStatistics();
+                String studentId = StudentDashboardController.currentStudentId;
+                if (studentId == null) {
+                    throw new Exception("Không xác định được sinh viên đăng nhập.");
+                }
+                List<model.Attendance> rawRecords = attendanceService.getAttendanceHistory(studentId);
+
+                // Group by Subject
+                Map<String, int[]> statsMap = new HashMap<>(); // [total, present, absent, late]
+                for (model.Attendance att : rawRecords) {
+                    String subj = att.getSubjectName() != null ? att.getSubjectName() : "Unknown";
+                    int[] counts = statsMap.getOrDefault(subj, new int[]{0, 0, 0, 0});
+                    counts[0]++; // total
+                    
+                    String st = att.getStatus();
+                    if ("PRESENT".equals(st)) counts[1]++;
+                    else if ("ABSENT".equals(st)) counts[2]++;
+                    else if ("LATE".equals(st)) counts[3]++;
+                    
+                    statsMap.put(subj, counts);
+                }
+
+                List<SubjectStatisticRecord> records = new ArrayList<>();
+                for (Map.Entry<String, int[]> entry : statsMap.entrySet()) {
+                    String subject = entry.getKey();
+                    int[] data = entry.getValue();
+                    int total = data[0];
+                    int present = data[1];
+                    int absent = data[2];
+                    int late = data[3];
+
+                    double percentage = total > 0 ? (double) present / total * 100 : 0;
+                    String status = percentage >= 80 ? "Tốt" : percentage >= 60 ? "Khá" : "Cần cải thiện";
+
+                    records.add(new SubjectStatisticRecord(
+                            subject,
+                            total,
+                            present,
+                            absent,
+                            late,
+                            String.format("%.1f%%", percentage),
+                            status,
+                            "Chi tiết"));
+                }
 
                 Platform.runLater(() -> {
                     statisticRecords = records;
@@ -289,40 +331,6 @@ public class AttendanceStatisticController implements Initializable {
         lblRecommendation.setText(recommendation.toString());
         boxRecommendation.setVisible(true);
         boxRecommendation.setManaged(true);
-    }
-
-    private List<SubjectStatisticRecord> generateMockStatistics() {
-        List<SubjectStatisticRecord> records = new ArrayList<>();
-
-        String[] subjects = { "Lập trình mạng", "Cơ sở dữ liệu", "Giải thuật", "An ninh thông tin" };
-        int[][] data = {
-                { 10, 9, 0, 1 }, // Lập trình mạng: 10 total, 9 present, 0 absent, 1 late
-                { 10, 8, 1, 1 }, // Cơ sở dữ liệu: 10 total, 8 present, 1 absent, 1 late
-                { 8, 5, 2, 1 }, // Giải thuật: 8 total, 5 present, 2 absent, 1 late
-                { 10, 9, 0, 1 } // An ninh thông tin: 10 total, 9 present, 0 absent, 1 late
-        };
-
-        for (int i = 0; i < subjects.length; i++) {
-            int total = data[i][0];
-            int present = data[i][1];
-            int absent = data[i][2];
-            int late = data[i][3];
-
-            double percentage = total > 0 ? (double) present / total * 100 : 0;
-            String status = percentage >= 80 ? "Tốt" : percentage >= 60 ? "Khá" : "Cần cải thiện";
-
-            records.add(new SubjectStatisticRecord(
-                    subjects[i],
-                    total,
-                    present,
-                    absent,
-                    late,
-                    String.format("%.1f%%", percentage),
-                    status,
-                    "Chi tiết"));
-        }
-
-        return records;
     }
 
     private void showError(String message) {

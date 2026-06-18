@@ -101,20 +101,10 @@
                 <Label text="📅  Lịch học tuần" styleClass="card-title"/>
                 <Region prefHeight="12"/>
                 
-                <!-- Days of week headers -->
-                <HBox styleClass="week-header" spacing="2">
-                    <padding><Insets top="12" bottom="12" left="0" right="0"/></padding>
-                    <Label text="Thứ 2" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
-                    <Label text="Thứ 3" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
-                    <Label text="Thứ 4" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
-                    <Label text="Thứ 5" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
-                    <Label text="Thứ 6" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
-                    <Label text="Thứ 7" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
-                    <Label text="CN" styleClass="week-day-header" HBox.hgrow="ALWAYS"/>
-                </HBox>
-
                 <!-- Days columns -->
-                <HBox fx:id="weekGridDays" spacing="2" VBox.vgrow="ALWAYS"/>
+                <ScrollPane vbarPolicy="NEVER" hbarPolicy="AS_NEEDED" fitToHeight="true" fitToWidth="true" style="-fx-background-color: transparent; -fx-background-insets: 0; -fx-padding: 0; -fx-border-width: 0;" VBox.vgrow="ALWAYS">
+                    <HBox fx:id="weekGridDays" spacing="2" HBox.hgrow="ALWAYS"/>
+                </ScrollPane>
 
                 <!-- Empty state -->
                 <VBox fx:id="emptyWeekBox" alignment="CENTER" spacing="12" 

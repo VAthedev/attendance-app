@@ -49,6 +49,10 @@ public class SessionRepository {
     }
     
     public Document findById(String sessionId) {
-        return sessionsCollection.find(Filters.eq("_id", sessionId)).first();
+        Document doc = sessionsCollection.find(Filters.eq("_id", sessionId)).first();
+        if (doc == null && ObjectId.isValid(sessionId)) {
+            doc = sessionsCollection.find(Filters.eq("_id", new ObjectId(sessionId))).first();
+        }
+        return doc;
     }
 }

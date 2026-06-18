@@ -90,7 +90,7 @@ public class ChatRepository {
 
 	private ChatMessage mapMessage(Document doc) {
 		ChatMessage msg = new ChatMessage();
-		msg.setId(doc.getString("_id"));
+		msg.setId(doc.get("_id").toString());
 		msg.setRoomKey(doc.getString("room_key") != null ? doc.getString("room_key") : doc.getString("subject_code"));
 		msg.setRoomName(doc.getString("room_name") != null ? doc.getString("room_name") : doc.getString("subject_name"));
 		msg.setSender(doc.getString("sender_id"));

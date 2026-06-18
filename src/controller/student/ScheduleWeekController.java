@@ -137,8 +137,6 @@ public class ScheduleWeekController implements Initializable {
 
     private void displayGridView(Map<Integer, List<ScheduleInfo>> weekSchedules) {
         weekGridDays.getChildren().clear();
-        HBox daysRow = new HBox(2);
-        daysRow.setStyle("-fx-fill-height: true;");
 
         String[] dayNames = {"Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "CN"};
 
@@ -146,21 +144,33 @@ public class ScheduleWeekController implements Initializable {
             VBox dayColumn = new VBox(4);
             dayColumn.getStyleClass().add("week-day-column");
             VBox.setVgrow(dayColumn, Priority.ALWAYS);
+            HBox.setHgrow(dayColumn, Priority.ALWAYS);
             dayColumn.setPrefHeight(300);
+            dayColumn.setPrefWidth(180);
+            dayColumn.setMinWidth(180);
+            dayColumn.setMaxWidth(Double.MAX_VALUE);
 
             LocalDate date = currentWeekStart.plusDays(day - 1);
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM");
 
             Label dayHeader = new Label(dayNames[day - 1]);
             dayHeader.getStyleClass().add("week-day-column-header");
+            dayHeader.setMaxWidth(Double.MAX_VALUE);
+            dayHeader.setAlignment(javafx.geometry.Pos.CENTER);
+            
             Label dateLabel = new Label(date.format(dateFormatter));
             dateLabel.getStyleClass().add("week-day-column-date");
+            dateLabel.setMaxWidth(Double.MAX_VALUE);
+            dateLabel.setAlignment(javafx.geometry.Pos.CENTER);
 
             VBox headerBox = new VBox(2);
             headerBox.getChildren().addAll(dayHeader, dateLabel);
+            headerBox.setAlignment(javafx.geometry.Pos.CENTER);
+            headerBox.setMaxWidth(Double.MAX_VALUE);
+            headerBox.setStyle("-fx-padding: 8;");
 
             VBox itemsBox = new VBox(4);
-            itemsBox.setStyle("-fx-fill-width: true;");
+            itemsBox.setStyle("-fx-fill-width: true; -fx-padding: 4;");
 
             List<ScheduleInfo> daySchedules = weekSchedules.getOrDefault(day, new ArrayList<>());
             for (ScheduleInfo schedule : daySchedules) {
@@ -168,6 +178,7 @@ public class ScheduleWeekController implements Initializable {
                 item.getStyleClass().add("week-day-item");
                 item.setStyle(getItemStyle(schedule.status));
                 item.setWrapText(true);
+                item.setMaxWidth(Double.MAX_VALUE);
                 itemsBox.getChildren().add(item);
             }
 
@@ -176,13 +187,11 @@ public class ScheduleWeekController implements Initializable {
             scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
             scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
             scrollPane.setFitToWidth(true);
+            VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
             dayColumn.getChildren().addAll(headerBox, scrollPane);
-            HBox.setHgrow(dayColumn, Priority.ALWAYS);
-            daysRow.getChildren().add(dayColumn);
+            weekGridDays.getChildren().add(dayColumn);
         }
-
-        weekGridDays.getChildren().add(daysRow);
     }
 
     private void displayListView(Map<Integer, List<ScheduleInfo>> weekSchedules) {

@@ -168,7 +168,25 @@ public class AttendanceHistoryController implements Initializable {
 
         new Thread(() -> {
             try {
-                List<AttendanceRecord> records = generateMockData();
+                String studentId = StudentDashboardController.currentStudentId;
+                if (studentId == null) {
+                    throw new Exception("Không xác định được sinh viên đăng nhập.");
+                }
+                
+                service.AttendanceService attendanceService = new service.AttendanceService();
+                List<model.Attendance> rawRecords = attendanceService.getAttendanceHistory(studentId);
+                
+                List<AttendanceRecord> records = new ArrayList<>();
+                for (model.Attendance att : rawRecords) {
+                    records.add(new AttendanceRecord(
+                        att.getAttendanceDate(),
+                        att.getSubjectName() != null ? att.getSubjectName() : "Unknown",
+                        att.getTimeString() != null ? att.getTimeString() : "",
+                        att.getMethod(),
+                        att.getStatus(),
+                        att.getRoom() != null ? att.getRoom() : att.getLocation()
+                    ));
+                }
 
                 Platform.runLater(() -> {
                     allRecords = records;
@@ -199,13 +217,13 @@ public class AttendanceHistoryController implements Initializable {
                 .filter(record -> {
                     if (selectedMonth != null && !selectedMonth.equals("Tất cả")) {
                         int monthNum = Integer.parseInt(selectedMonth.split(" ")[1]);
-                        if (record.getDate().getMonthValue() != monthNum) {
+                        if (record.getDate() == null || record.getDate().getMonthValue() != monthNum) {
                             return false;
                         }
                     }
 
                     if (selectedSubject != null && !selectedSubject.equals("Tất cả")) {
-                        if (!record.getSubject().equals(selectedSubject)) {
+                        if (!selectedSubject.equals(record.getSubject())) {
                             return false;
                         }
                     }
@@ -387,27 +405,7 @@ public class AttendanceHistoryController implements Initializable {
         alert.showAndWait();
     }
 
-    private List<AttendanceRecord> generateMockData() {
-        List<AttendanceRecord> records = new ArrayList<>();
-        String[] subjects = { "Lập trình mạng", "Cơ sở dữ liệu", "Giải thuật", "An ninh thông tin" };
-        String[] methods = { "GPS", "WiFi", "QR Code" };
-        String[] statuses = { "PRESENT", "ABSENT", "LATE" };
-        String[] rooms = { "P.201", "P.305", "P.108", "P.412" };
 
-        LocalDate startDate = LocalDate.now().minusMonths(3);
-
-        for (int i = 0; i < 30; i++) {
-            LocalDate date = startDate.plusDays(i * 2);
-            records.add(new AttendanceRecord(
-                    date,
-                    subjects[i % subjects.length],
-                    "07:30 - 09:10",
-                    methods[i % methods.length],
-                    statuses[i % 3],
-                    rooms[i % rooms.length]));
-        }
-        return records;
-    }
 
     /**
      * Inner class để hiển thị dữ liệu trong bảng

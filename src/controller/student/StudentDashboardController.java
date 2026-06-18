@@ -95,6 +95,9 @@ public class StudentDashboardController implements Initializable {
                 
                 java.util.List<java.util.Map<String,Object>> todaySchedules = database.ScheduleRepository.getInstance()
                         .findStudentSchedulesByDate(studentId, today);
+                        
+                service.NotificationService notifService = new service.NotificationService();
+                java.util.List<model.Notification> notifications = notifService.getNotificationsForStudent(studentId);
                 
                 javafx.application.Platform.runLater(() -> {
                     lblTotalSubjects.setText(String.valueOf(subjectCount));
@@ -125,9 +128,24 @@ public class StudentDashboardController implements Initializable {
                         lblNoAttendance.setVisible(true);
                         lblNoAttendance.setManaged(true);
                     }
-                    if (lblNoNotif != null) {
-                        lblNoNotif.setVisible(true);
-                        lblNoNotif.setManaged(true);
+                    
+                    if (notifications == null || notifications.isEmpty()) {
+                        if (lblNoNotif != null) {
+                            lblNoNotif.setVisible(true);
+                            lblNoNotif.setManaged(true);
+                        }
+                    } else {
+                        if (lblNoNotif != null) {
+                            lblNoNotif.setVisible(false);
+                            lblNoNotif.setManaged(false);
+                        }
+                        // Only show top 3 recent notifications on dashboard
+                        int count = Math.min(3, notifications.size());
+                        for (int i = 0; i < count; i++) {
+                            model.Notification n = notifications.get(i);
+                            String prefix = n.isRead() ? "" : "🔵 ";
+                            addNotificationItem(prefix + n.getTitle(), n.getMessage());
+                        }
                     }
                 });
             } catch(Exception e) { e.printStackTrace(); }
@@ -195,7 +213,7 @@ public class StudentDashboardController implements Initializable {
     @FXML private void showHistory()         { setActiveBtn(btnHistory);         lblPageTitle.setText("Lịch sử điểm danh");  loadSubPane("/fxml/student/AttendanceHistory.fxml"); }
     @FXML private void showStats()           { setActiveBtn(btnStats);           lblPageTitle.setText("Thống kê chuyên cần"); loadSubPane("/fxml/student/AttendanceStats.fxml"); }
     @FXML private void showChat()            { setActiveBtn(btnChat);            lblPageTitle.setText("Chat nội bộ lớp học"); loadSubPane("/fxml/shared/Chat.fxml"); }
-    @FXML private void showNotification()    { setActiveBtn(btnNotification);    lblPageTitle.setText("Thông báo");           showComing(); }
+    @FXML private void showNotification()    { setActiveBtn(btnNotification);    lblPageTitle.setText("Thông báo");           loadSubPane("/fxml/student/Notification.fxml"); }
 
     @FXML private void handleLogout() {
         loadScene("/fxml/auth/Login.fxml", "Dang nhap");
