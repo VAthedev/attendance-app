@@ -59,7 +59,7 @@ Thumbs.db
 # Project specific
 resources/TKB.xlsx
 .github/java-upgrade/*/
-lib/
+# lib/    # Enabled lib tracking for offline builds
 bin/
 
 # Temporary scripts and Python files
@@ -71,6 +71,12 @@ bin/
 TKB.xlsx
 subj.json
 tkb_info.json
+missing_lecturers.json
+*.json
+
+# Generated enrollment and lecturer files
+*GenerateEnrollments*
+*GenerateLecturers*
 
 # IntelliJ
 *.iml
