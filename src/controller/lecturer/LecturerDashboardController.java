@@ -56,7 +56,7 @@ public class LecturerDashboardController implements Initializable {
     public void setUserInfo(String fullName, String userCode, String token) {
         this.sessionToken = token;
         lblUserName.setText(fullName.isEmpty() ? "Giang vien" : fullName);
-        lblUserCode.setText("Ma GV: " + userCode);
+        lblUserCode.setText("Ma GV: " + userCode.replace("}", ""));
 
         // Đăng ký PushListener để nhận thông báo thời gian thực
         client.network.SocketClient.getInstance().addPushListener(res -> {
@@ -187,12 +187,12 @@ public class LecturerDashboardController implements Initializable {
         loadSubPane("/fxml/lecturer/OpenSession.fxml");
     }
 
-    @FXML private void showSchedule()       { setActiveBtn(btnSchedule);       lblPageTitle.setText("Quản lý TKB");          showComing(); }
-    @FXML private void showAttendanceList() { setActiveBtn(btnAttendanceList); lblPageTitle.setText("Danh sách điểm danh");  showComing(); }
+    @FXML private void showSchedule()       { setActiveBtn(btnSchedule);       lblPageTitle.setText("Quản lý TKB");          loadSubPane("/fxml/lecturer/LecturerSchedule.fxml"); }
+    @FXML private void showAttendanceList() { setActiveBtn(btnAttendanceList); lblPageTitle.setText("Danh sách điểm danh");  loadSubPane("/fxml/lecturer/LecturerAttendanceList.fxml"); }
     @FXML private void showStatistics()     { setActiveBtn(btnStatistics);     lblPageTitle.setText("Thống kê chuyên cần");  showComing(); }
     @FXML private void showExport()         { setActiveBtn(btnExport);         lblPageTitle.setText("Xuất danh sách");       showComing(); }
     @FXML private void showChat()           { setActiveBtn(btnChat);           lblPageTitle.setText("Chat nội bộ lớp học");  loadSubPane("/fxml/shared/Chat.fxml"); }
-    @FXML private void showNotification()   { setActiveBtn(btnNotification);   lblPageTitle.setText("Thông báo");            showComing(); }
+    @FXML private void showNotification()   { setActiveBtn(btnNotification);   lblPageTitle.setText("Thông báo");            loadSubPane("/fxml/student/Notification.fxml"); }
 
     @FXML private void handleLogout() { loadScene("/fxml/auth/Login.fxml", "Dang nhap"); }
 
@@ -209,6 +209,17 @@ public class LecturerDashboardController implements Initializable {
             paneComingSoon.setVisible(false);  paneComingSoon.setManaged(false);
             FXMLLoader loader = FxmlUtil.loader(fxmlPath);
             Node node = loader.load();
+            
+            Object controller = loader.getController();
+            if (controller instanceof LecturerScheduleController) {
+                ((LecturerScheduleController) controller).setLecturerName(lblUserName.getText());
+            } else if (controller instanceof LecturerAttendanceListController) {
+                String uCode = lblUserCode.getText().replace("Ma GV: ", "").trim();
+                ((LecturerAttendanceListController) controller).setLecturerId(uCode);
+            } else if (controller instanceof OpenSessionController) {
+                ((OpenSessionController) controller).setLecturerName(lblUserName.getText());
+            }
+            
             contentArea.getChildren().add(node);
             currentSubPane = node;
         } catch (Exception e) {

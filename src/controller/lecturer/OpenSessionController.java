@@ -51,13 +51,30 @@ public class OpenSessionController implements Initializable {
         setupConfigVisibility();
     }
 
+    private String lecturerName;
+
     private void initializeClasses() {
-        // Mock data - replace with database
-        cbClasses.getItems().addAll(
-            "CTK43A - Lập trình mạng",
-            "CTK43A - Cơ sở dữ liệu",
-            "CTK43B - Giải thuật"
-        );
+        // Will be loaded when setLecturerName is called
+    }
+
+    public void setLecturerName(String lecturerName) {
+        this.lecturerName = lecturerName;
+        lblLecturerName.setText(lecturerName);
+        
+        // Load classes from DB
+        new Thread(() -> {
+            try {
+                database.ScheduleRepository scheduleRepo = database.ScheduleRepository.getInstance();
+                List<String> classes = scheduleRepo.findUniqueClassesByLecturerName(lecturerName);
+                
+                javafx.application.Platform.runLater(() -> {
+                    cbClasses.getItems().clear();
+                    cbClasses.getItems().addAll(classes);
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     private void setupDateTimeSpinners() {

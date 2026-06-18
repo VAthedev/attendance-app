@@ -82,6 +82,10 @@ public class AttendanceRepository {
 		return attendanceCollection.find(Filters.eq("session_id", sessionId)).into(new ArrayList<>());
 	}
 
+	public long countBySessionId(String sessionId) {
+		return attendanceCollection.countDocuments(Filters.eq("session_id", sessionId));
+	}
+
 	public List<Document> findByStudentId(String studentId) {
 		return attendanceCollection.find(Filters.eq("student_id", studentId)).into(new ArrayList<>());
 	}

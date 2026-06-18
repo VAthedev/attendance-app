@@ -55,4 +55,10 @@ public class SessionRepository {
         }
         return doc;
     }
+
+    public List<Document> findAllSessionsByLecturerId(String lecturerId) {
+        return sessionsCollection.find(Filters.eq("lecturer_id", lecturerId))
+            .sort(new Document("date", -1).append("start_time", -1))
+            .into(new ArrayList<>());
+    }
 }

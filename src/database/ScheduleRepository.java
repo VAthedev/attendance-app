@@ -152,11 +152,105 @@ public class ScheduleRepository {
         return out;
     }
 
+    public List<String> findUniqueClassesByLecturerName(String lecturerName) {
+        List<String> classes = new ArrayList<>();
+        if (lecturerName == null || lecturerName.isEmpty()) return classes;
+        try {
+            MongoCollection<Document> schedules = DatabaseHelper.getInstance().getSchedulesCollection();
+            List<org.bson.conversions.Bson> pipeline = java.util.Arrays.asList(
+                com.mongodb.client.model.Aggregates.match(com.mongodb.client.model.Filters.eq("lecturer_name", lecturerName)),
+                com.mongodb.client.model.Aggregates.group(
+                    new Document("class_code", "$class_code").append("subject_name", "$subject_name"),
+                    com.mongodb.client.model.Accumulators.first("class_code", "$class_code"),
+                    com.mongodb.client.model.Accumulators.first("subject_name", "$subject_name")
+                ),
+                com.mongodb.client.model.Aggregates.sort(com.mongodb.client.model.Sorts.ascending("class_code", "subject_name"))
+            );
+            com.mongodb.client.MongoCursor<Document> cursor = schedules.aggregate(pipeline).iterator();
+            try {
+                while (cursor.hasNext()) {
+                    Document d = cursor.next();
+                    String className = d.getString("class_code");
+                    String subjectName = d.getString("subject_name");
+                    classes.add(className + " - " + subjectName);
+                }
+            } finally {
+                cursor.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return classes;
+    }
+
     public List<Map<String,Object>> findStudentSchedulesInRange(String studentId, LocalDate start, LocalDate end) {
         List<Map<String,Object>> out = new ArrayList<>();
         if (studentId == null || studentId.isEmpty()) return out;
         for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
             out.addAll(findStudentSchedulesByDate(studentId, d));
+        }
+        return out;
+    }
+
+    public List<Map<String,Object>> findLecturerSchedulesByDate(String lecturerName, LocalDate date) {
+        List<Map<String,Object>> out = new ArrayList<>();
+        if (lecturerName == null || lecturerName.isEmpty()) return out;
+        try {
+            int dayOfWeek = date.getDayOfWeek().getValue();
+            String targetDayOfWeek = String.valueOf(dayOfWeek == 7 ? 8 : dayOfWeek + 1);
+
+            MongoCollection<Document> schedules = DatabaseHelper.getInstance().getSchedulesCollection();
+
+            List<org.bson.conversions.Bson> pipeline = java.util.Arrays.asList(
+                com.mongodb.client.model.Aggregates.match(com.mongodb.client.model.Filters.and(
+                        com.mongodb.client.model.Filters.eq("lecturer_name", lecturerName),
+                        com.mongodb.client.model.Filters.eq("day_of_week", targetDayOfWeek)
+                )),
+                com.mongodb.client.model.Aggregates.lookup("subjects", "subject_code", "code", "subject_details"),
+                com.mongodb.client.model.Aggregates.unwind("$subject_details", new com.mongodb.client.model.UnwindOptions().preserveNullAndEmptyArrays(true)),
+                com.mongodb.client.model.Aggregates.project(com.mongodb.client.model.Projections.fields(
+                    com.mongodb.client.model.Projections.excludeId(),
+                    com.mongodb.client.model.Projections.computed("subject", "$subject_details.name"),
+                    com.mongodb.client.model.Projections.computed("room", "$room"),
+                    com.mongodb.client.model.Projections.computed("className", "$class_code"),
+                    com.mongodb.client.model.Projections.computed("periods", "$periods"),
+                    com.mongodb.client.model.Projections.computed("day_of_week", "$day_of_week")
+                ))
+            );
+
+            MongoCursor<Document> cursor = schedules.aggregate(pipeline).iterator();
+            try {
+                while (cursor.hasNext()) {
+                    Document d = cursor.next();
+                    Map<String,Object> m = new HashMap<>();
+                    m.put("subject", d.getString("subject"));
+                    m.put("lecturer", lecturerName);
+                    m.put("room", d.getString("room"));
+                    m.put("className", d.getString("className"));
+                    
+                    String periods = d.getString("periods");
+                    m.put("periods", periods);
+                    String[] times = parsePeriods(periods);
+                    m.put("startTime", times[0]);
+                    m.put("endTime", times[1]);
+                    
+                    // For lecturer view, "status" can just indicate UPCOMING, or TODAY
+                    m.put("status", date.isBefore(LocalDate.now()) ? "PAST" : (date.isEqual(LocalDate.now()) ? "TODAY" : "UPCOMING")); 
+                    m.put("date", date.format(ISO));
+                    out.add(m);
+                }
+            } finally { cursor.close(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return out;
+    }
+
+    public List<Map<String,Object>> findLecturerSchedulesInRange(String lecturerName, LocalDate start, LocalDate end) {
+        List<Map<String,Object>> out = new ArrayList<>();
+        if (lecturerName == null || lecturerName.isEmpty()) return out;
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            out.addAll(findLecturerSchedulesByDate(lecturerName, d));
         }
         return out;
     }
