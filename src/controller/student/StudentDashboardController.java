@@ -57,13 +57,27 @@ public class StudentDashboardController implements Initializable {
         currentStudentId = studentId;
         // Đăng ký PushListener để nhận thông báo thời gian thực
         client.network.SocketClient.getInstance().addPushListener(res -> {
-            if ("ANNOUNCEMENT".equals(res.getMessage()) && "SCHEDULE_UPDATED".equals(res.getDataValue("message"))) {
-                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-                alert.setTitle("Thông báo");
-                alert.setHeaderText("Đồng bộ Thời khóa biểu");
-                alert.setContentText("Thời khóa biểu đã có sự thay đổi. Vui lòng làm mới trang.");
-                alert.show();
-                loadDashboardData(studentId);
+            if ("ANNOUNCEMENT".equals(res.getMessage())) {
+                String message = res.getDataValue("message");
+                if ("SCHEDULE_UPDATED".equals(message)) {
+                    javafx.application.Platform.runLater(() -> {
+                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                        alert.setTitle("Thông báo");
+                        alert.setHeaderText("Đồng bộ Thời khóa biểu");
+                        alert.setContentText("Thời khóa biểu đã có sự thay đổi. Vui lòng làm mới trang.");
+                        alert.show();
+                        loadDashboardData(studentId);
+                    });
+                } else if (message != null && message.startsWith("SESSION_CLOSED:")) {
+                    javafx.application.Platform.runLater(() -> {
+                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
+                        alert.setTitle("Thông báo Điểm danh");
+                        alert.setHeaderText("Phiên điểm danh đã đóng");
+                        alert.setContentText("Hệ thống đã tự động đóng phiên điểm danh (hết giờ).");
+                        alert.show();
+                        showHome(); // Đẩy user về màn hình chính
+                    });
+                }
             }
         });
 

@@ -15,6 +15,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ResourceBundle;
 
+import service.GPSVerifyService;
+import service.GPSVerifyService.Coordinates;
+import service.WiFiVerifyService;
+import service.WiFiVerifyService.WiFiInfo;
+
 public class AttendanceGPSController implements Initializable {
 
     @FXML
@@ -90,6 +95,9 @@ public class AttendanceGPSController implements Initializable {
     private double classLat = 10.7770;
     private double classLng = 106.7010;
     private String classBSSID = "AA:BB:CC:DD:EE:FF";
+
+    private GPSVerifyService gpsService = new GPSVerifyService();
+    private WiFiVerifyService wifiService = new WiFiVerifyService();
 
     private static final double GPS_RADIUS_METERS = 100.0;
     private static final int WARNING_THRESHOLD_SECONDS = 300;
@@ -354,21 +362,30 @@ public class AttendanceGPSController implements Initializable {
         btnCheckin.setDisable(true);
         lblError.setText("");
 
-        // TODO: Dung LocationUtil.getCurrentLocation() thuc te
         new Thread(() -> {
             try {
+                // Giả lập thời gian delay lấy GPS
                 Thread.sleep(1500);
             } catch (InterruptedException e) {
             }
+            
+            Coordinates currentLoc = gpsService.getCurrentLocation();
+            Coordinates classLoc = new Coordinates(classLat, classLng);
+            
+            double dist = gpsService.calculateDistance(
+                currentLoc.getLatitude(), currentLoc.getLongitude(),
+                classLoc.getLatitude(), classLoc.getLongitude()
+            );
+
+            boolean isWithin = gpsService.isWithinGeofence(currentLoc, classLoc, GPS_RADIUS_METERS);
+
             javafx.application.Platform.runLater(() -> {
                 gpsProgress.setVisible(false);
-                currentLat = 10.77695;
-                currentLng = 106.70095;
+                currentLat = currentLoc.getLatitude();
+                currentLng = currentLoc.getLongitude();
 
-                double dist = calcDistance(currentLat, currentLng, classLat, classLng);
-
-                lblMyLocation.setText(String.format("%.6f, %.6f", currentLat, currentLng));
-                lblClassLocation.setText(String.format("%.6f, %.6f", classLat, classLng));
+                lblMyLocation.setText(currentLoc.toString());
+                lblClassLocation.setText(classLoc.toString());
                 lblDistance.setText(String.format("%.0fm", dist));
 
                 boxGPSWaiting.setVisible(false);
@@ -376,7 +393,7 @@ public class AttendanceGPSController implements Initializable {
                 boxGPSResult.setVisible(true);
                 boxGPSResult.setManaged(true);
 
-                if (dist <= GPS_RADIUS_METERS) {
+                if (isWithin) {
                     gpsVerified = true;
                     lblGPSStatus.setText("✓ Hợp lệ");
                     lblGPSStatus.getStyleClass().setAll("badge-present");
@@ -398,25 +415,34 @@ public class AttendanceGPSController implements Initializable {
         boxWiFiWaiting.setVisible(false);
         boxWiFiWaiting.setManaged(false);
 
-        // TODO: Dung WiFiVerifyService thuc te
-        // Gia lap: dung dung WiFi truong
-        String currentBSSID = "AA:BB:CC:DD:EE:FF";
+        new Thread(() -> {
+            try {
+                // Giả lập thời gian delay scan WiFi
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+            }
 
-        lblCurrentWiFi.setText("UIT-Student (" + currentBSSID + ")");
-        boxWiFiResult.setVisible(true);
-        boxWiFiResult.setManaged(true);
+            WiFiInfo currentWiFi = wifiService.getCurrentWiFi();
+            boolean isVerified = wifiService.verifyBSSID(currentWiFi.getBssid(), classBSSID);
 
-        if (currentBSSID.equals(classBSSID)) {
-            wifiVerified = true;
-            lblWiFiStatus.setText("✓ Hợp lệ");
-            lblWiFiStatus.getStyleClass().setAll("badge-present");
-        } else {
-            wifiVerified = false;
-            lblWiFiStatus.setText("✗ Sai mạng");
-            lblWiFiStatus.getStyleClass().setAll("badge-absent");
-            showError("Bạn không kết nối đúng WiFi của lớp học.");
-        }
-        updateCheckinButton();
+            javafx.application.Platform.runLater(() -> {
+                lblCurrentWiFi.setText(currentWiFi.toString());
+                boxWiFiResult.setVisible(true);
+                boxWiFiResult.setManaged(true);
+
+                if (isVerified) {
+                    wifiVerified = true;
+                    lblWiFiStatus.setText("✓ Hợp lệ");
+                    lblWiFiStatus.getStyleClass().setAll("badge-present");
+                } else {
+                    wifiVerified = false;
+                    lblWiFiStatus.setText("✗ Sai mạng");
+                    lblWiFiStatus.getStyleClass().setAll("badge-absent");
+                    showError("Bạn không kết nối đúng WiFi của lớp học.");
+                }
+                updateCheckinButton();
+            });
+        }).start();
     }
 
     private void updateCheckinButton() {
@@ -437,49 +463,54 @@ public class AttendanceGPSController implements Initializable {
         btnCheckin.setDisable(true);
         btnCheckin.setText("Đang điểm danh...");
 
-        // TODO: Gui CHECKIN_GPS hoac CHECKIN_WIFI request
-        // Map payload = Map.of("sessionId", currentSessionId,
-        // "gpsLat", currentLat, "gpsLng", currentLng,
-        // "wifiBSSID", classBSSID,
-        // "deviceId", DeviceFingerprintService.getDeviceId());
+        String method = "";
+        if (boxGPS.isVisible() && boxWiFi.isVisible())
+            method = "GPS + WiFi";
+        else if (boxGPS.isVisible())
+            method = "GPS";
+        else if (boxWiFi.isVisible())
+            method = "WiFi";
+            
+        final String finalMethod = method;
 
         new Thread(() -> {
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
+                protocol.Request req = new protocol.Request(protocol.RequestType.SUBMIT_ATTENDANCE);
+                req.putPayload("session_id", currentSessionId);
+                req.putPayload("device_id", service.DeviceFingerprintService.getDeviceId());
+                req.putPayload("method", finalMethod);
+
+                protocol.Response res = client.network.SocketClient.getInstance().sendRequest(req);
+
+                javafx.application.Platform.runLater(() -> {
+                    if (res.isSuccess()) {
+                        String time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+                        lblCheckinTime.setText("Thời gian: " + time + "  •  Phương thức: " + finalMethod);
+                        boxSuccess.setVisible(true);
+                        boxSuccess.setManaged(true);
+                        btnCheckin.setVisible(false);
+                        btnCheckin.setManaged(false);
+
+                        if (countdownTimeline != null) {
+                            countdownTimeline.stop();
+                        }
+                    } else {
+                        btnCheckin.setDisable(false);
+                        btnCheckin.setText("Điểm danh ngay");
+                        showError(res.getMessage());
+                    }
+                });
+            } catch (Exception e) {
+                javafx.application.Platform.runLater(() -> {
+                    btnCheckin.setDisable(false);
+                    btnCheckin.setText("Điểm danh ngay");
+                    showError("Lỗi kết nối server: " + e.getMessage());
+                });
             }
-            javafx.application.Platform.runLater(() -> {
-                String time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-                String method = "";
-                if (boxGPS.isVisible() && boxWiFi.isVisible())
-                    method = "GPS + WiFi";
-                else if (boxGPS.isVisible())
-                    method = "GPS";
-                else if (boxWiFi.isVisible())
-                    method = "WiFi";
-
-                lblCheckinTime.setText("Thời gian: " + time + "  •  Phương thức: " + method);
-                boxSuccess.setVisible(true);
-                boxSuccess.setManaged(true);
-                btnCheckin.setVisible(false);
-                btnCheckin.setManaged(false);
-
-                if (countdownTimeline != null) {
-                    countdownTimeline.stop();
-                }
-            });
         }).start();
     }
 
-    private double calcDistance(double lat1, double lng1, double lat2, double lng2) {
-        final int R = 6371000; // ban kinh Trai Dat (m)
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLng = Math.toRadians(lng2 - lng1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                        * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
+
 
     private void showError(String msg) {
         lblError.setText(msg);

@@ -89,6 +89,8 @@ public class ClientHandler implements Runnable {
                     return handleOpenSession(req);
                 case CLOSE_SESSION:
                     return handleCloseSession(req);
+                case SUBMIT_ATTENDANCE:
+                    return handleSubmitAttendance(req);
                 default:
                     return Response.error("Chua ho tro: " + req.getType());
             }
@@ -324,6 +326,9 @@ public class ClientHandler implements Runnable {
             
             String sessionId = database.SessionRepository.getInstance().openSession(sessionDoc);
             
+            // Lên lịch tự động đóng phiên
+            SessionCountdownService.getInstance().scheduleSessionClose(sessionId, duration);
+            
             Response res = Response.ok("Mở phiên điểm danh thành công.");
             res.putPayload("session_id", sessionId);
             return res;
@@ -371,6 +376,53 @@ public class ClientHandler implements Runnable {
             }
         } catch (IOException e) {
             System.err.println("[Handler] Loi dong: " + e.getMessage());
+        }
+    }
+
+    private Response handleSubmitAttendance(Request req) {
+        if (userId == null) {
+            return Response.error("Chưa đăng nhập.");
+        }
+
+        String sessionId = req.getPayloadValue("session_id");
+        String deviceId = req.getPayloadValue("device_id");
+        String method = req.getPayloadValue("method");
+
+        if (sessionId == null || sessionId.isEmpty()) return Response.error("Thiếu session_id");
+        if (deviceId == null || deviceId.isEmpty()) return Response.error("Thiếu device_id");
+
+        try {
+            org.bson.Document session = database.SessionRepository.getInstance().findById(sessionId);
+            if (session == null || !"OPEN".equals(session.getString("status"))) {
+                return Response.error("Phiên điểm danh không tồn tại hoặc đã đóng.");
+            }
+
+            // Kiem tra thoi gian de set trang thai
+            long now = System.currentTimeMillis();
+            long startTime = session.getLong("start_time");
+            // Cho phép đi muộn trong 1/3 thời gian đầu, hoặc tuỳ logic. Ở đây ta coi nộp thành công là PRESENT.
+            // Nếu gửi sau khi quá hạn thì error ở trên đã bắt.
+            
+            org.bson.Document attendanceDoc = new org.bson.Document();
+            attendanceDoc.put("session_id", sessionId);
+            attendanceDoc.put("student_id", userId);
+            attendanceDoc.put("student_name", this.userName);
+            attendanceDoc.put("device_id", deviceId);
+            attendanceDoc.put("method", method);
+            attendanceDoc.put("status", "PRESENT");
+            attendanceDoc.put("timestamp", now);
+            
+            database.AttendanceRepository repo = new database.AttendanceRepository();
+            repo.insert(attendanceDoc);
+            
+            return Response.ok("Điểm danh thành công!");
+        } catch (IllegalStateException e) {
+            if (e.getMessage().contains("device_id")) {
+                return Response.error("Thiết bị này đã được sử dụng để điểm danh cho người khác trong phiên này!");
+            }
+            return Response.error("Bạn đã điểm danh trong phiên này rồi.");
+        } catch (Exception e) {
+            return Response.error("Lỗi server khi lưu điểm danh: " + e.getMessage());
         }
     }
 

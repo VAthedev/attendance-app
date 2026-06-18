@@ -18,6 +18,7 @@ public enum RequestType {
     // Diem danh
     OPEN_SESSION,
     CLOSE_SESSION,
+    SUBMIT_ATTENDANCE,
     CHECKIN_GPS,
     CHECKIN_WIFI,
     GET_ATTENDANCE_HISTORY,
