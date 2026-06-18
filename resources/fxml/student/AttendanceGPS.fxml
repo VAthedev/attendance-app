@@ -10,47 +10,43 @@
             stylesheets="@../../css/main.css">
 
     <VBox spacing="20">
-        <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
+        <padding>
+            <Insets top="24" bottom="24" left="24" right="24"/>
+        </padding>
 
-        <!-- Phien dang mo -->
+        <!-- Phiên điểm danh đang mở -->
         <VBox styleClass="dashboard-card" spacing="14">
-            <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-            
+            <padding>
+                <Insets top="20" bottom="20" left="20" right="20"/>
+            </padding>
+
             <HBox alignment="CENTER_LEFT">
                 <Label text="▶  Phiên điểm danh đang mở" styleClass="card-title" HBox.hgrow="ALWAYS"/>
                 <Label fx:id="lblSessionStatus" text="ĐANG MỞ" styleClass="session-status-open"/>
             </HBox>
 
-            <!-- BỘ ĐẾM THỜI GIAN MỚI -->
+            <!-- Bộ đếm thời gian -->
             <VBox spacing="12" styleClass="timer-container">
-                <!-- Bộ đếm chính: Giờ : Phút : Giây -->
                 <HBox alignment="CENTER" spacing="10">
-                    <!-- Giờ -->
                     <VBox alignment="CENTER" spacing="5">
                         <Label fx:id="lblHours" text="00" styleClass="timer-digit"/>
                         <Label text="GIỜ" styleClass="timer-unit"/>
                     </VBox>
                     <Label text=":" styleClass="timer-separator"/>
-                    
-                    <!-- Phút -->
                     <VBox alignment="CENTER" spacing="5">
                         <Label fx:id="lblMinutes" text="00" styleClass="timer-digit"/>
                         <Label text="PHÚT" styleClass="timer-unit"/>
                     </VBox>
                     <Label text=":" styleClass="timer-separator"/>
-                    
-                    <!-- Giây -->
                     <VBox alignment="CENTER" spacing="5">
                         <Label fx:id="lblSeconds" text="00" styleClass="timer-digit"/>
                         <Label text="GIÂY" styleClass="timer-unit"/>
                     </VBox>
                 </HBox>
-                
-                <!-- Progress bar thời gian -->
+
                 <ProgressBar fx:id="timerProgress" styleClass="timer-progress" 
                            prefWidth="400" prefHeight="6" progress="1.0"/>
-                
-                <!-- Thông tin thời gian chi tiết -->
+
                 <HBox spacing="15" alignment="CENTER">
                     <Label fx:id="lblStartTime" text="Bắt đầu: --:--" styleClass="timer-info"/>
                     <Label text="|" style="-fx-text-fill: #bdc3c7; -fx-font-size: 11px;"/>
@@ -59,51 +55,57 @@
                     <Label fx:id="lblTimeRemaining" text="Còn lại: --" styleClass="timer-info"/>
                 </HBox>
             </VBox>
-            
-            <!-- Cảnh báo khi sắp hết giờ -->
+
+            <!-- Cảnh báo sắp hết giờ -->
             <VBox fx:id="boxTimeWarning" alignment="CENTER" spacing="5" 
                   visible="false" managed="false">
-                <padding><Insets top="5" bottom="5"/></padding>
+                <padding>
+                    <Insets top="5" bottom="5"/>
+                </padding>
                 <Label text="⚠️ SẮP HẾT THỜI GIAN ĐIỂM DANH ⚠️" styleClass="time-warning-label"/>
                 <ProgressBar fx:id="warningProgress" prefWidth="300" prefHeight="3"
                            styleClass="warning-progress" progress="0.0"/>
             </VBox>
 
-            <!-- Label cũ giữ để tương thích code cũ (ẩn đi) -->
+            <!-- Label cũ để tương thích (ẩn) -->
             <Label fx:id="lblCountdown" text="--:--" visible="false" managed="false"/>
 
             <!-- Không có phiên -->
             <VBox fx:id="boxNoSession" alignment="CENTER" spacing="8">
-                <padding><Insets top="20" bottom="20"/></padding>
-                <Label text="😴" style="-fx-font-size:40px;"/>
-                <Label text="Hiện chưa có phiên điểm danh nào được mở"
-                       styleClass="empty-label"/>
-                <Label text="Vui lòng chờ giảng viên mở phiên"
-                       styleClass="form-subtitle"/>
+                <padding>
+                    <Insets top="20" bottom="20"/>
+                </padding>
+                <Label text="😴" style="-fx-font-size: 40px;"/>
+                <Label text="Hiện chưa có phiên điểm danh nào được mở" styleClass="empty-label"/>
+                <Label text="Vui lòng chờ giảng viên mở phiên" styleClass="form-subtitle"/>
                 <Button text="🔄  Kiểm tra lại" styleClass="btn-primary"
                         prefHeight="40" prefWidth="160" onAction="#checkSession"/>
             </VBox>
 
             <!-- Có phiên -->
             <VBox fx:id="boxSessionInfo" spacing="10" visible="false" managed="false">
-                <Label fx:id="lblSubjectName"  text="" styleClass="schedule-subject"/>
+                <Label fx:id="lblSubjectName" text="" styleClass="schedule-subject"/>
                 <Label fx:id="lblScheduleInfo" text="" styleClass="schedule-time"/>
                 <HBox spacing="10">
-                    <Label fx:id="lblMethodGPS"  text="📍 GPS"  styleClass="badge-present"/>
+                    <Label fx:id="lblMethodGPS" text="📍 GPS" styleClass="badge-present"/>
                     <Label fx:id="lblMethodWiFi" text="📶 WiFi" styleClass="badge-present"/>
                 </HBox>
             </VBox>
         </VBox>
 
-        <!-- Xac minh vi tri GPS -->
+        <!-- Xác minh GPS -->
         <VBox fx:id="boxGPS" styleClass="dashboard-card" spacing="14"
               visible="false" managed="false">
-            <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+            <padding>
+                <Insets top="20" bottom="20" left="20" right="20"/>
+            </padding>
             <Label text="📍  Xác minh vị trí GPS" styleClass="card-title"/>
 
             <VBox fx:id="boxGPSWaiting" alignment="CENTER" spacing="12">
-                <padding><Insets top="16" bottom="16"/></padding>
-                <Label text="📡" style="-fx-font-size:40px;"/>
+                <padding>
+                    <Insets top="16" bottom="16"/>
+                </padding>
+                <Label text="📡" style="-fx-font-size: 40px;"/>
                 <Label text="Đang lấy vị trí của bạn..." styleClass="form-subtitle"/>
                 <ProgressIndicator fx:id="gpsProgress" prefWidth="40" prefHeight="40"/>
                 <Button text="📍  Lấy vị trí GPS" styleClass="btn-primary"
@@ -112,7 +114,7 @@
 
             <VBox fx:id="boxGPSResult" spacing="10" visible="false" managed="false">
                 <HBox spacing="12" styleClass="schedule-item" alignment="CENTER_LEFT">
-                    <Label text="📍" style="-fx-font-size:20px;"/>
+                    <Label text="📍" style="-fx-font-size: 20px;"/>
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
                         <Label text="Vị trí của bạn" styleClass="field-label"/>
                         <Label fx:id="lblMyLocation" text="" styleClass="schedule-time"/>
@@ -120,7 +122,7 @@
                     <Label fx:id="lblGPSStatus" text="" styleClass="badge-present"/>
                 </HBox>
                 <HBox spacing="12" styleClass="schedule-item" alignment="CENTER_LEFT">
-                    <Label text="🏫" style="-fx-font-size:20px;"/>
+                    <Label text="🏫" style="-fx-font-size: 20px;"/>
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
                         <Label text="Vị trí lớp học" styleClass="field-label"/>
                         <Label fx:id="lblClassLocation" text="" styleClass="schedule-time"/>
@@ -130,22 +132,26 @@
             </VBox>
         </VBox>
 
-        <!-- Xac minh WiFi -->
+        <!-- Xác minh WiFi -->
         <VBox fx:id="boxWiFi" styleClass="dashboard-card" spacing="14"
               visible="false" managed="false">
-            <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+            <padding>
+                <Insets top="20" bottom="20" left="20" right="20"/>
+            </padding>
             <Label text="📶  Xác minh WiFi" styleClass="card-title"/>
 
             <VBox fx:id="boxWiFiWaiting" alignment="CENTER" spacing="12">
-                <padding><Insets top="16" bottom="16"/></padding>
-                <Label text="📶" style="-fx-font-size:40px;"/>
+                <padding>
+                    <Insets top="16" bottom="16"/>
+                </padding>
+                <Label text="📶" style="-fx-font-size: 40px;"/>
                 <Button text="📶  Quét WiFi" styleClass="btn-primary"
                         prefHeight="44" prefWidth="200" onAction="#scanWiFi"/>
             </VBox>
 
             <VBox fx:id="boxWiFiResult" spacing="10" visible="false" managed="false">
                 <HBox spacing="12" styleClass="schedule-item" alignment="CENTER_LEFT">
-                    <Label text="📶" style="-fx-font-size:20px;"/>
+                    <Label text="📶" style="-fx-font-size: 20px;"/>
                     <VBox spacing="2" HBox.hgrow="ALWAYS">
                         <Label text="WiFi hiện tại" styleClass="field-label"/>
                         <Label fx:id="lblCurrentWiFi" text="" styleClass="schedule-time"/>
@@ -155,7 +161,7 @@
             </VBox>
         </VBox>
 
-        <!-- Nut diem danh -->
+        <!-- Nút điểm danh -->
         <VBox spacing="8">
             <Label fx:id="lblError" text="" styleClass="error-label"
                    wrapText="true" maxWidth="Infinity"/>
@@ -165,11 +171,13 @@
                     disable="true"/>
         </VBox>
 
-        <!-- Ket qua diem danh -->
+        <!-- Kết quả điểm danh -->
         <VBox fx:id="boxSuccess" alignment="CENTER" spacing="16"
               visible="false" managed="false">
-            <padding><Insets top="20" bottom="20"/></padding>
-            <Label text="✅" style="-fx-font-size:56px;"/>
+            <padding>
+                <Insets top="20" bottom="20"/>
+            </padding>
+            <Label text="✅" style="-fx-font-size: 56px;"/>
             <Label text="Điểm danh thành công!" styleClass="form-title"/>
             <Label fx:id="lblCheckinTime" text="" styleClass="form-subtitle"/>
         </VBox>

@@ -131,8 +131,8 @@ public class StudentDashboardController implements Initializable {
     @FXML private void showScheduleDay()     { setActiveBtn(btnScheduleDay);     lblPageTitle.setText("TKB theo ngày");       loadSubPane("/fxml/student/ScheduleDay.fxml"); }
     @FXML private void showScheduleWeek()    { setActiveBtn(btnScheduleWeek);    lblPageTitle.setText("TKB theo tuần");       loadSubPane("/fxml/student/ScheduleWeek.fxml"); }
     @FXML private void showScheduleSubject() { setActiveBtn(btnScheduleSubject); lblPageTitle.setText("TKB theo môn");        loadSubPane("/fxml/student/ScheduleSubject.fxml"); }
-    @FXML private void showHistory()         { setActiveBtn(btnHistory);         lblPageTitle.setText("Lịch sử điểm danh");  showComing(); }
-    @FXML private void showStats()           { setActiveBtn(btnStats);           lblPageTitle.setText("Thống kê chuyên cần"); showComing(); }
+    @FXML private void showHistory()         { setActiveBtn(btnHistory);         lblPageTitle.setText("Lịch sử điểm danh");  loadSubPane("/fxml/student/AttendanceHistory.fxml"); }
+    @FXML private void showStats()           { setActiveBtn(btnStats);           lblPageTitle.setText("Thống kê chuyên cần"); loadSubPane("/fxml/student/AttendanceStats.fxml"); }
     @FXML private void showChat()            { setActiveBtn(btnChat);            lblPageTitle.setText("Chat nội bộ lớp học"); loadSubPane("/fxml/shared/Chat.fxml"); }
     @FXML private void showNotification()    { setActiveBtn(btnNotification);    lblPageTitle.setText("Thông báo");           showComing(); }
 

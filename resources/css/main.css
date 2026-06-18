@@ -930,3 +930,228 @@
     -fx-border-radius: 12;
     -fx-border-width: 1;
 }
+
+/* =============================================
+   GPS / WIFI ATTENDANCE STYLES (BỔ SUNG MỚI)
+   ============================================= */
+
+/* ===== TIMER CONTAINER ===== */
+.timer-container {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 10;
+    -fx-padding: 15;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+}
+
+/* ===== TIMER DIGITS ===== */
+.timer-digit {
+    -fx-font-size: 42px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Monospaced";
+    -fx-text-fill: #2c3e50;
+}
+
+.timer-digit.warning {
+    -fx-text-fill: #f39c12;
+}
+
+.timer-digit.critical {
+    -fx-text-fill: #e74c3c;
+}
+
+/* ===== TIMER UNIT ===== */
+.timer-unit {
+    -fx-font-size: 10px;
+    -fx-text-fill: #7f8c8d;
+    -fx-font-weight: normal;
+}
+
+/* ===== TIMER SEPARATOR ===== */
+.timer-separator {
+    -fx-font-size: 36px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+/* ===== TIMER PROGRESS BAR ===== */
+.timer-progress {
+    -fx-accent: #27ae60;
+    -fx-background-color: #ecf0f1;
+    -fx-background-radius: 3;
+}
+
+.timer-progress.warning {
+    -fx-accent: #f39c12;
+}
+
+.timer-progress.critical {
+    -fx-accent: #e74c3c;
+}
+
+/* ===== TIMER INFO LABELS ===== */
+.timer-info {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7f8c8d;
+}
+
+/* ===== SESSION STATUS ===== */
+.session-status-open {
+    -fx-background-color: #27ae60;
+    -fx-text-fill: white;
+    -fx-padding: 4 12 4 12;
+    -fx-background-radius: 20;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.session-status-warning {
+    -fx-background-color: #f39c12;
+    -fx-text-fill: white;
+    -fx-padding: 4 12 4 12;
+    -fx-background-radius: 20;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.session-status-closed {
+    -fx-background-color: #95a5a6;
+    -fx-text-fill: white;
+    -fx-padding: 4 12 4 12;
+    -fx-background-radius: 20;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+/* ===== TIME WARNING ===== */
+.time-warning-label {
+    -fx-text-fill: #e74c3c;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.warning-progress {
+    -fx-accent: #e74c3c;
+    -fx-background-color: #fadbd8;
+    -fx-background-radius: 2;
+}
+
+/* ===== ATTENDANCE BADGES (GHI ĐÈ CHO GPS/WIFI) ===== */
+.badge-present {
+    -fx-background-color: #d4edda;
+    -fx-text-fill: #155724;
+    -fx-padding: 4 10 4 10;
+    -fx-background-radius: 12;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.badge-absent {
+    -fx-background-color: #f8d7da;
+    -fx-text-fill: #721c24;
+    -fx-padding: 4 10 4 10;
+    -fx-background-radius: 12;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.badge-late {
+    -fx-background-color: #fff3cd;
+    -fx-text-fill: #856404;
+    -fx-padding: 4 10 4 10;
+    -fx-background-radius: 12;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+/* ===== DASHBOARD CARD (GHI ĐÈ CHO GPS/WIFI) ===== */
+.dashboard-card {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 10, 0, 0, 2);
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+
+.card-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+/* ===== FIELD LABEL (GHI ĐÈ CHO GPS/WIFI) ===== */
+.field-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #7f8c8d;
+}
+
+/* ===== FORM SUBTITLE ===== */
+.form-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #95a5a6;
+}
+
+/* ===== SCROLL TRANSPARENT (GHI ĐÈ) ===== */
+.scroll-transparent {
+    -fx-background-color: transparent;
+    -fx-background: #f0f2f5;
+}
+
+.scroll-transparent>.viewport {
+    -fx-background-color: transparent;
+}
+
+/* ===== STAT BOX ===== */
+.stat-box {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 10;
+    -fx-padding: 15;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 10;
+    -fx-transition: all 0.3s;
+}
+
+.stat-box:hover {
+    -fx-background-color: #e8f4f8;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 5, 0, 0, 2);
+}
+
+.stat-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #7f8c8d;
+}
+
+/* ===== TABLE VIEW ===== */
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: #ecf0f1;
+    -fx-border-radius: 10;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #34495e;
+    -fx-background-radius: 10 10 0 0;
+}
+
+.table-view .column-header,
+.table-view .filler {
+    -fx-background-color: transparent;
+    -fx-size: 40;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: #ecf0f1;
+    -fx-border-width: 0 0 1 0;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: #f5f6fa;
+}
