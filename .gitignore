@@ -62,9 +62,15 @@ resources/TKB.xlsx
 lib/
 bin/
 
-# Temporary scripts
+# Temporary scripts and Python files
 *.bat
 *.ps1
+*.py
+
+# Configuration and data files
+TKB.xlsx
+subj.json
+tkb_info.json
 
 # IntelliJ
 *.iml

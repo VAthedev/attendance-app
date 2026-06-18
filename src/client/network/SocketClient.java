@@ -76,8 +76,8 @@ public class SocketClient {
             pending.put(nonce, future);
             writer.println(json);
 
-            // Wait for response (timeout 10s)
-            Response res = future.get(10, TimeUnit.SECONDS);
+            // Wait for response (timeout 30s)
+            Response res = future.get(30, TimeUnit.SECONDS);
             return res;
         } catch (TimeoutException te) {
             return Response.error("Timeout chờ phản hồi từ server.");

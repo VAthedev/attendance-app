@@ -117,7 +117,13 @@ public class LoginController implements Initializable {
                         response.getDataValue("userId"),
                         response.getDataValue("fullName"),
                         response.getDataValue("role"));
-                navigateToDashboard(response);
+                String reqChangeStr = response.getDataValue("requirePasswordChange");
+                boolean reqChange = "true".equalsIgnoreCase(reqChangeStr);
+                if (reqChange) {
+                    javafx.application.Platform.runLater(() -> promptPasswordChange(username, response));
+                } else {
+                    navigateToDashboard(response);
+                }
             } else {
                 showError(response.getMessage());
             }
@@ -149,6 +155,27 @@ public class LoginController implements Initializable {
 
     private void showError(String msg)  { lblError.setText(msg); }
     private void setLoading(boolean on) { btnLogin.setDisable(on); btnLogin.setText(on ? "Dang dang nhap..." : "Dang nhap"); }
+
+    private void promptPasswordChange(String username, protocol.Response loginResponse) {
+        javafx.scene.control.TextInputDialog dialog = new javafx.scene.control.TextInputDialog();
+        dialog.setTitle("Yêu cầu đổi mật khẩu");
+        dialog.setHeaderText("Đây là lần đăng nhập đầu tiên.\nVui lòng đổi mật khẩu để tiếp tục.");
+        dialog.setContentText("Mật khẩu mới:");
+        dialog.showAndWait().ifPresent(newPw -> {
+            if (newPw.trim().isEmpty()) {
+                showError("Mật khẩu mới không được để trống!");
+                return;
+            }
+            Request req = new Request(RequestType.RESET_PASSWORD, java.util.Map.of("username", username, "password", newPw));
+            SocketClient.getInstance().sendAsync(req, res -> {
+                if (res.isOk()) {
+                    javafx.application.Platform.runLater(() -> navigateToDashboard(loginResponse));
+                } else {
+                    javafx.application.Platform.runLater(() -> showError("Lỗi đổi mật khẩu: " + res.getMessage()));
+                }
+            });
+        });
+    }
 
     private void navigateToDashboard(protocol.Response response) {
         String role = response.getDataValue("role");

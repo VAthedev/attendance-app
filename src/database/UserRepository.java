@@ -104,7 +104,20 @@ public class UserRepository {
         try {
             return usersCollection.updateOne(
                 Filters.eq("email", email),
-                new Document("$set", new Document("password_hash", hash).append("salt", salt))
+                new Document("$set", new Document("password_hash", hash).append("salt", salt).append("require_password_change", false))
+            ).getModifiedCount() > 0;
+        } catch (MongoException e) {
+            throw new SQLException("Loi MongoDB: " + e.getMessage(), e);
+        }
+    }
+
+    public boolean updatePasswordByUsername(String username, String newPassword) throws SQLException {
+        String salt = SHA256Util.generateSalt();
+        String hash = SHA256Util.hashWithSalt(newPassword, salt);
+        try {
+            return usersCollection.updateOne(
+                Filters.eq("username", username),
+                new Document("$set", new Document("password_hash", hash).append("salt", salt).append("require_password_change", false))
             ).getModifiedCount() > 0;
         } catch (MongoException e) {
             throw new SQLException("Loi MongoDB: " + e.getMessage(), e);
@@ -139,6 +152,12 @@ public class UserRepository {
         u.setStudentId(doc.getString("student_id"));
         u.setDeviceId(doc.getString("device_id"));
         u.setSessionToken(doc.getString("session_token"));
+        
+        Boolean reqPw = doc.getBoolean("require_password_change");
+        if (reqPw != null) {
+            u.setRequirePasswordChange(reqPw);
+        }
+        
         return u;
     }
 

@@ -64,8 +64,9 @@ public class ScheduleDayController implements Initializable {
 
         // Load from DB in background thread
         new Thread(() -> {
+            String sid = StudentDashboardController.currentStudentId;
             java.util.List<java.util.Map<String,Object>> rows = database.ScheduleRepository.getInstance()
-                    .findSessionsByDate(currentSelectedDate);
+                    .findStudentSchedulesByDate(sid, currentSelectedDate);
 
             java.util.List<ScheduleInfo> schedules = new ArrayList<>();
             for (java.util.Map<String,Object> r : rows) {
@@ -83,11 +84,7 @@ public class ScheduleDayController implements Initializable {
                 schedules.add(si);
             }
 
-            // If DB returned nothing, fallback to existing mock
-            if (schedules.isEmpty()) {
-                schedules = getSchedulesForDate(currentSelectedDate);
-            }
-
+            // Removed mock data fallback so real DB emptiness is shown
             java.util.List<ScheduleInfo> finalSchedules = schedules;
             javafx.application.Platform.runLater(() -> {
                 if (finalSchedules.isEmpty()) {

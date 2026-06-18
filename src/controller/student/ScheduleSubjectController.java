@@ -24,7 +24,8 @@ public class ScheduleSubjectController implements Initializable {
     @FXML private ComboBox<String> cbSubjects;
     @FXML private Label lblSubjectLecturer, lblSubjectCredits, lblSubjectSessions;
     @FXML private Label lblTotalSessions, lblAttendedSessions, lblAbsentSessions, lblAttendanceRate;
-    @FXML private VBox subjectStatsBox, subjectStatCardsBox, subjectScheduleBox, semesterProgressBox;
+    @FXML private VBox subjectStatsBox, subjectScheduleBox, semesterProgressBox;
+    @FXML private HBox subjectStatCardsBox;
     @FXML private VBox subjectSessionsList, emptySubjectBox;
     @FXML private ProgressBar attendanceProgress, remainingProgress;
     @FXML private Label lblAttendancePercent, lblRemainingPercent;
@@ -39,48 +40,41 @@ public class ScheduleSubjectController implements Initializable {
 
     private void initializeSubjects() {
         // Try load subjects from DB; fallback to mock
-        java.util.List<java.util.Map<String,Object>> subs = database.ScheduleRepository.getInstance().findAllSubjects();
-        if (subs != null && !subs.isEmpty()) {
-            for (java.util.Map<String,Object> s : subs) {
-                String name = (String) s.getOrDefault("name", s.getOrDefault("subject", "Unnamed"));
-                String lecturer = (String) s.getOrDefault("lecturer", "");
-                int credits = 3;
-                int total = 15;
-                List<SessionInfo> sessions = new ArrayList<>();
-                subjectsData.put(name, new SubjectInfo(name, lecturer, credits, total, sessions));
+        // Populate from Aggregation Pipeline
+        String sid = StudentDashboardController.currentStudentId;
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.util.List<java.util.Map<String,Object>> allSchedules = database.ScheduleRepository.getInstance()
+                .findStudentSchedulesInRange(sid, today.minusWeeks(2), today.plusWeeks(10));
+                
+        for (java.util.Map<String,Object> s : allSchedules) {
+            String name = (String) s.getOrDefault("subject", "Unnamed");
+            if (!subjectsData.containsKey(name)) {
+                String lecturer = (String) s.getOrDefault("lecturer", "Unknown");
+                subjectsData.put(name, new SubjectInfo(name, lecturer, 3, 15, new ArrayList<>()));
             }
-        } else {
-            // Mock data - replace with database
-            subjectsData.put("Lập trình mạng", new SubjectInfo(
-                    "Lập trình mạng", "TS. Nguyễn Văn A", 3, 15,
-                    Arrays.asList(
-                        new SessionInfo("15/03/2026", "07:30 - 09:10", "P.201", "ATTENDED"),
-                        new SessionInfo("22/03/2026", "07:30 - 09:10", "P.201", "ATTENDED"),
-                        new SessionInfo("29/03/2026", "07:30 - 09:10", "P.201", "ATTENDED"),
-                        new SessionInfo("05/04/2026", "07:30 - 09:10", "P.201", "PENDING"),
-                        new SessionInfo("12/04/2026", "07:30 - 09:10", "P.201", "PENDING")
-                    )
-            ));
+            
+            // Format date for UI: "dd/MM/yyyy"
+            String rawDate = (String) s.get("date");
+            String displayDate = rawDate;
+            try {
+                java.time.LocalDate d = java.time.LocalDate.parse(rawDate);
+                displayDate = d.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            } catch(Exception ignored) {}
+            
+            String time = s.get("startTime") + " - " + s.get("endTime");
+            String room = (String) s.getOrDefault("room", "");
+            String status = (String) s.getOrDefault("status", "PENDING");
+            
+            // Generate mock past/future status based on date for visual testing
+            try {
+                java.time.LocalDate d = java.time.LocalDate.parse(rawDate);
+                if (d.isBefore(today)) status = "ATTENDED";
+                else if (d.isAfter(today)) status = "PENDING";
+            } catch(Exception ignored) {}
 
-            subjectsData.put("Cơ sở dữ liệu", new SubjectInfo(
-                    "Cơ sở dữ liệu", "TS. Trần Thị B", 3, 15,
-                    Arrays.asList(
-                        new SessionInfo("14/03/2026", "09:30 - 11:10", "P.305", "ATTENDED"),
-                        new SessionInfo("21/03/2026", "09:30 - 11:10", "P.305", "ABSENT"),
-                        new SessionInfo("28/03/2026", "09:30 - 11:10", "P.305", "ATTENDED")
-                    )
-            ));
-
-            subjectsData.put("Giải thuật", new SubjectInfo(
-                    "Giải thuật", "ThS. Phạm Văn C", 3, 15,
-                    Arrays.asList(
-                        new SessionInfo("16/03/2026", "13:00 - 14:40", "P.401", "ATTENDED"),
-                        new SessionInfo("23/03/2026", "13:00 - 14:40", "P.401", "ATTENDED"),
-                        new SessionInfo("30/03/2026", "13:00 - 14:40", "P.401", "PENDING")
-                    )
-            ));
+            subjectsData.get(name).sessions.add(new SessionInfo(displayDate, time, room, status));
         }
-
+        
         // Populate combo box
         cbSubjects.getItems().addAll(subjectsData.keySet());
     }

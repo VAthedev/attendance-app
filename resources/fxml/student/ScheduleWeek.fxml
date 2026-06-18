@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 
 <ScrollPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="controller.student.ScheduleWeekController"
