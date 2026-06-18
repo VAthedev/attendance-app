@@ -75,7 +75,7 @@ public class StudentDashboardController implements Initializable {
                         alert.setHeaderText("Phiên điểm danh đã đóng");
                         alert.setContentText("Hệ thống đã tự động đóng phiên điểm danh (hết giờ).");
                         alert.show();
-                        showHome(); // Đẩy user về màn hình chính
+                        showDashboard(); // Đẩy user về màn hình chính
                     });
                 }
             }

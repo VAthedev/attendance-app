@@ -480,10 +480,10 @@ public class AttendanceGPSController implements Initializable {
                 req.putPayload("device_id", service.DeviceFingerprintService.getDeviceId());
                 req.putPayload("method", finalMethod);
 
-                protocol.Response res = client.network.SocketClient.getInstance().sendRequest(req);
+                protocol.Response res = client.network.SocketClient.getInstance().send(req);
 
                 javafx.application.Platform.runLater(() -> {
-                    if (res.isSuccess()) {
+                    if (res.isOk()) {
                         String time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
                         lblCheckinTime.setText("Thời gian: " + time + "  •  Phương thức: " + finalMethod);
                         boxSuccess.setVisible(true);
