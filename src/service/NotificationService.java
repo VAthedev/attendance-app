@@ -18,7 +18,6 @@ public class NotificationService {
     }
 
     public List<Notification> getNotificationsForStudent(String studentId) {
-        repository.insertMockDataIfEmpty(studentId); // Make sure there's data for demo
         
         List<Document> docs = repository.findByStudentId(studentId);
         List<Notification> notifications = new ArrayList<>();

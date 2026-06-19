@@ -74,6 +74,9 @@ public class ScheduleWeekController implements Initializable {
             String sid = StudentDashboardController.currentStudentId;
             java.util.List<java.util.Map<String,Object>> rows = database.ScheduleRepository.getInstance()
                     .findStudentSchedulesInRange(sid, currentWeekStart, weekEnd);
+            service.AttendanceService attendanceService = new service.AttendanceService();
+            List<model.Attendance> attendances = attendanceService.getAttendanceHistory(sid);
+
             for (java.util.Map<String,Object> r : rows) {
                 String dateStr = (String) r.getOrDefault("date", "");
                 java.time.LocalDate date = null;
@@ -83,14 +86,32 @@ public class ScheduleWeekController implements Initializable {
                 if (day == 7) day = 7; // Sunday remains 7
                 int idx = (day == 7) ? 7 : day; // 1..7
 
+                String subj = (String) r.getOrDefault("subject", "");
+                String status = "PENDING";
+
+                for (model.Attendance att : attendances) {
+                    if (att.getSubjectName() != null && att.getSubjectName().equals(subj)) {
+                        java.time.LocalDate attDate = java.time.Instant.ofEpochMilli(att.getTimestamp()).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+                        if (attDate.equals(date)) {
+                            if ("PRESENT".equals(att.getStatus())) status = "ATTENDED";
+                            else if ("ABSENT".equals(att.getStatus())) status = "MISSED";
+                            else if ("LATE".equals(att.getStatus())) status = "LATE";
+                        }
+                    }
+                }
+
+                if ("PENDING".equals(status) && date.isBefore(LocalDate.now())) {
+                    status = "MISSED";
+                }
+
                 ScheduleInfo si = new ScheduleInfo(
-                        (String) r.getOrDefault("subject", ""),
+                        subj,
                         (String) r.getOrDefault("startTime", ""),
                         (String) r.getOrDefault("endTime", ""),
                         (String) r.getOrDefault("lecturer", ""),
                         (String) r.getOrDefault("room", ""),
                         (String) r.getOrDefault("className", ""),
-                        (String) r.getOrDefault("status", "PENDING")
+                        status
                 );
                 weekSchedules.computeIfAbsent(idx, k -> new ArrayList<>()).add(si);
             }

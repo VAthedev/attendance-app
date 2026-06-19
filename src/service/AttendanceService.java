@@ -68,6 +68,7 @@ public class AttendanceService {
                         LocalDate date = instant.atZone(ZoneId.systemDefault()).toLocalDate();
                         LocalTime time = instant.atZone(ZoneId.systemDefault()).toLocalTime();
                         att.setAttendanceDate(date);
+                        att.setTimestamp(startTimeMs);
                         
                         String tString = time.format(timeFormatter);
                         if (endTimeMs != null) {
@@ -75,6 +76,26 @@ public class AttendanceService {
                             tString += " - " + eTime.format(timeFormatter);
                         }
                         att.setTimeString(tString);
+                    }
+                }
+            } else {
+                // Read from new schema
+                Long ts = doc.getLong("timestamp");
+                if (ts != null) {
+                    att.setTimestamp(ts);
+                    Instant instant = Instant.ofEpochMilli(ts);
+                    LocalDate date = instant.atZone(ZoneId.systemDefault()).toLocalDate();
+                    att.setAttendanceDate(date);
+                }
+                
+                String subjectCode = doc.getString("subject_code");
+                if (subjectCode != null) {
+                    // Try to resolve subject name
+                    Document subjDoc = database.DatabaseHelper.getInstance().getSubjectsCollection().find(new Document("code", subjectCode)).first();
+                    if (subjDoc != null) {
+                        att.setSubjectName(subjDoc.getString("name"));
+                    } else {
+                        att.setSubjectName(subjectCode);
                     }
                 }
             }
