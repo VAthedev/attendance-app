@@ -56,7 +56,7 @@ public class LecturerAttendanceListController {
 
                 for (Document doc : sessions) {
                     SessionData data = new SessionData();
-                    data.id = doc.getObjectId("_id") != null ? doc.getObjectId("_id").toHexString() : doc.getString("_id");
+                    data.id = doc.get("_id").toString();
                     data.className = doc.getString("class_code");
                     data.subject = doc.getString("subject_code");
                     data.date = doc.getString("date");

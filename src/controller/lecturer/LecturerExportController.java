@@ -102,7 +102,7 @@ public class LecturerExportController implements Initializable {
                 }
 
                 for (Document session : sessions) {
-                    String sessionId = session.getObjectId("_id").toHexString();
+                    String sessionId = session.get("_id").toString();
                     List<Document> attendances = new AttendanceRepository().findBySessionId(sessionId);
 
                     for (Document attendance : attendances) {

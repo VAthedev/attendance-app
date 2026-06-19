@@ -31,9 +31,9 @@ public class GPSVerifyService {
      */
     public Coordinates getCurrentLocation() {
         // Mô phỏng tọa độ ngẫu nhiên gần vị trí trường (bán kính khoảng 150m đổ lại)
-        // Lấy tọa độ gốc là 10.77695, 106.70095 và sai số một chút
-        double baseLat = 10.77695;
-        double baseLng = 106.70095;
+        // Lấy tọa độ gốc là 10.8700, 106.8031 (UIT campus) và sai số một chút
+        double baseLat = 10.8700;
+        double baseLng = 106.8031;
         
         // Random offset từ -0.001 đến 0.001 (khoảng +-110m)
         double offsetLat = (Math.random() - 0.5) * 0.002;

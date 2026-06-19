@@ -83,7 +83,7 @@ public class LecturerStatisticsController implements Initializable {
                 long totalPossibleAttendances = totalStudents * totalSessions;
 
                 for (Document session : sessions) {
-                    String sessionId = session.getObjectId("_id").toHexString();
+                    String sessionId = session.get("_id").toString();
                     String dateStr = session.getString("date");
                     
                     List<Document> attendances = new AttendanceRepository().findBySessionId(sessionId);

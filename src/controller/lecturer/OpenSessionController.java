@@ -101,6 +101,17 @@ public class OpenSessionController implements Initializable {
             boxWiFiConfig.setManaged(newVal);
         });
 
+        // Auto-fill actual BSSID for easier testing
+        new Thread(() -> {
+            service.WiFiVerifyService wifiSvc = new service.WiFiVerifyService();
+            service.WiFiVerifyService.WiFiInfo wifi = wifiSvc.getCurrentWiFi();
+            if (wifi != null && !wifi.getBssid().isEmpty()) {
+                javafx.application.Platform.runLater(() -> {
+                    txtBSSID.setText(wifi.getBssid());
+                });
+            }
+        }).start();
+
         boxGPSConfig.setVisible(true);
         boxWiFiConfig.setVisible(true);
     }
