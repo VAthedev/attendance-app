@@ -189,8 +189,8 @@ public class LecturerDashboardController implements Initializable {
 
     @FXML private void showSchedule()       { setActiveBtn(btnSchedule);       lblPageTitle.setText("Quản lý TKB");          loadSubPane("/fxml/lecturer/LecturerSchedule.fxml"); }
     @FXML private void showAttendanceList() { setActiveBtn(btnAttendanceList); lblPageTitle.setText("Danh sách điểm danh");  loadSubPane("/fxml/lecturer/LecturerAttendanceList.fxml"); }
-    @FXML private void showStatistics()     { setActiveBtn(btnStatistics);     lblPageTitle.setText("Thống kê chuyên cần");  showComing(); }
-    @FXML private void showExport()         { setActiveBtn(btnExport);         lblPageTitle.setText("Xuất danh sách");       showComing(); }
+    @FXML private void showStatistics()     { setActiveBtn(btnStatistics);     lblPageTitle.setText("Thống kê chuyên cần");  loadSubPane("/fxml/lecturer/LecturerStatistics.fxml"); }
+    @FXML private void showExport()         { setActiveBtn(btnExport);         lblPageTitle.setText("Xuất danh sách");       loadSubPane("/fxml/lecturer/LecturerExport.fxml"); }
     @FXML private void showChat()           { setActiveBtn(btnChat);           lblPageTitle.setText("Chat nội bộ lớp học");  loadSubPane("/fxml/shared/Chat.fxml"); }
     @FXML private void showNotification()   { setActiveBtn(btnNotification);   lblPageTitle.setText("Thông báo");            loadSubPane("/fxml/student/Notification.fxml"); }
 
@@ -218,6 +218,10 @@ public class LecturerDashboardController implements Initializable {
                 ((LecturerAttendanceListController) controller).setLecturerId(uCode);
             } else if (controller instanceof OpenSessionController) {
                 ((OpenSessionController) controller).setLecturerName(lblUserName.getText());
+            } else if (controller instanceof LecturerStatisticsController) {
+                ((LecturerStatisticsController) controller).setLecturerName(lblUserName.getText());
+            } else if (controller instanceof LecturerExportController) {
+                ((LecturerExportController) controller).setLecturerName(lblUserName.getText());
             }
             
             contentArea.getChildren().add(node);

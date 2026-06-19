@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.chart.PieChart?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="20.0" style="-fx-background-color: #f8fafc; -fx-padding: 20;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.lecturer.LecturerStatisticsController">
+   <children>
+      <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+         <children>
+            <Label style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #1e293b;" text="Chọn lớp học:" />
+            <ComboBox fx:id="cbClasses" prefWidth="300.0" promptText="-- Chọn lớp --" style="-fx-background-color: #f1f5f9; -fx-border-color: #e2e8f0; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 2;" />
+         </children>
+      </HBox>
+      <HBox spacing="20.0">
+         <children>
+            <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);" HBox.hgrow="ALWAYS">
+               <children>
+                  <Label style="-fx-text-fill: #64748b; -fx-font-size: 13px;" text="Tổng số sinh viên" />
+                  <Label fx:id="lblTotalStudents" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #1e293b;" text="0" />
+               </children>
+            </VBox>
+            <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);" HBox.hgrow="ALWAYS">
+               <children>
+                  <Label style="-fx-text-fill: #64748b; -fx-font-size: 13px;" text="Tổng số buổi đã học" />
+                  <Label fx:id="lblTotalSessions" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #1e293b;" text="0" />
+               </children>
+            </VBox>
+            <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);" HBox.hgrow="ALWAYS">
+               <children>
+                  <Label style="-fx-text-fill: #64748b; -fx-font-size: 13px;" text="Tỉ lệ đi học trung bình" />
+                  <Label fx:id="lblAvgAttendance" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #10b981;" text="0%" />
+               </children>
+            </VBox>
+         </children>
+      </HBox>
+      <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+         <children>
+            <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);" HBox.hgrow="ALWAYS">
+               <children>
+                  <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1e293b;" text="Biểu đồ số lượng đi học theo từng buổi" />
+                  <BarChart fx:id="barChart" animated="false" legendVisible="false" VBox.vgrow="ALWAYS">
+                    <xAxis>
+                      <CategoryAxis label="Ngày học" side="BOTTOM" />
+                    </xAxis>
+                    <yAxis>
+                      <NumberAxis label="Số sinh viên có mặt" side="LEFT" />
+                    </yAxis>
+                  </BarChart>
+               </children>
+            </VBox>
+            <VBox style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);" HBox.hgrow="NEVER">
+               <children>
+                  <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1e293b;" text="Tổng quan chuyên cần" />
+                  <PieChart fx:id="pieChart" animated="false" />
+               </children>
+            </VBox>
+         </children>
+      </HBox>
+   </children>
+</VBox>

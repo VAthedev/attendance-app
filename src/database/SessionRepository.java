@@ -61,4 +61,10 @@ public class SessionRepository {
             .sort(new Document("date", -1).append("start_time", -1))
             .into(new ArrayList<>());
     }
+
+    public List<Document> findSessionsByClassCode(String classCode) {
+        return sessionsCollection.find(Filters.eq("class_name", classCode))
+            .sort(new Document("date", 1).append("start_time", 1))
+            .into(new ArrayList<>());
+    }
 }
