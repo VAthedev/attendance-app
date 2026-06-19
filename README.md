@@ -49,14 +49,20 @@ java --module-path "lib\javafx-sdk-21\lib" --add-modules javafx.controls,javafx.
 Neu ban van muon dung `javac` thu cong, can bo sung them cac file jar Apache POI vao `lib/` (vi `javac` khong tu tai dependency tu `pom.xml`).
 
 ## Yeu cau
-- Java 21+
+- Java 21 LTS (Long-Term Support, hỗ trợ đến 2031)
 - JavaFX SDK 21
 - MongoDB Atlas hoac MongoDB compatible connection string
 - VS Code + Extension Pack for Java
+- Maven 3.9+ (hoặc sử dụng Maven Wrapper)
 
 ## Ghi chu
 - Neu VS Code chua nhan jar moi, chay lenh `Java: Clean Java Language Server Workspace` va reload workspace.
 - Thu muc `bin/` duoc dung de chua class da compile.
+
+## Nang cap Java
+- **2026-06-19**: Nâng cấp từ Java 17 lên Java 21 LTS
+  - Hỗ trợ Long-Term Support đến 2031
+  - Cải tiến hiệu suất và tính năng mới (Virtual Threads, Records, Pattern Matching)
 
 ## Thanh vien nhom
 | Ten | MSSV | Phan cong |

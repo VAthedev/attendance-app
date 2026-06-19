@@ -61,7 +61,13 @@ public class UserRepository {
     // Dang nhap - nhan password thô, lay salt tu DB roi verify
     public User login(String username, String password) throws SQLException {
         try {
-            Document userDoc = usersCollection.find(Filters.eq("username", username)).first();
+            Document userDoc = usersCollection.find(
+                Filters.or(
+                    Filters.eq("username", username),
+                    Filters.eq("student_id", username)
+                )
+            ).first();
+            
             if (userDoc != null) {
                 String salt = userDoc.getString("salt");
                 String storedHash = userDoc.getString("password_hash");
