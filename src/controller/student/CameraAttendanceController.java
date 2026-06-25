@@ -149,6 +149,13 @@ public class CameraAttendanceController implements Initializable {
     }
 
     @FXML
+    public void mockSuccess(ActionEvent event) {
+        closeCamera();
+        if (onSuccessCallback != null) onSuccessCallback.run();
+        ((Stage) btnCapture.getScene().getWindow()).close();
+    }
+
+    @FXML
     public void handleCancel(ActionEvent event) {
         closeCamera();
         ((Stage) btnCapture.getScene().getWindow()).close();

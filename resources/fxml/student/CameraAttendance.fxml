@@ -21,5 +21,6 @@
     <HBox spacing="16" alignment="CENTER">
         <Button text="Quay lại" styleClass="btn-secondary" onAction="#handleCancel"/>
         <Button fx:id="btnCapture" text="📷 Chụp và Nhận Diện" styleClass="btn-primary" onAction="#handleCapture"/>
+        <Button text="[DEV] Giả lập quét thành công" styleClass="btn-secondary" onAction="#mockSuccess"/>
     </HBox>
 </VBox>
