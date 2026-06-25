@@ -313,6 +313,11 @@ public class ClientHandler implements Runnable {
             sessionDoc.put("duration", duration);
             
             long startTime = System.currentTimeMillis();
+            if (req.getPayload().containsKey("start_time")) {
+                try {
+                    startTime = Long.parseLong(req.getPayloadValue("start_time"));
+                } catch (NumberFormatException ignored) {}
+            }
             sessionDoc.put("start_time", startTime);
             sessionDoc.put("end_time", startTime + (duration * 60L * 1000L));
             
@@ -347,6 +352,7 @@ public class ClientHandler implements Runnable {
         }
         boolean success = database.SessionRepository.getInstance().closeSession(sessionId);
         if (success) {
+            new service.AttendanceService().finalizeSessionAttendance(sessionId);
             return Response.ok("Đã đóng phiên điểm danh.");
         } else {
             return Response.error("Không thể đóng phiên (không tồn tại hoặc đã đóng).");

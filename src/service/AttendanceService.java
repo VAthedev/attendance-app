@@ -257,6 +257,55 @@ public class AttendanceService {
     }
 
     /**
+     * Finalize attendance for a session, mark absent students, and send warnings if needed.
+     */
+    public void finalizeSessionAttendance(String sessionId) {
+        Document sessionDoc = SessionRepository.getInstance().findById(sessionId);
+        if (sessionDoc == null) return;
+        
+        String classCode = sessionDoc.getString("class_name");
+        String subjectCode = sessionDoc.getString("subject");
+        if (classCode == null) return;
+        
+        List<Document> enrollments = database.EnrollmentRepository.getInstance().findStudentsByClassCode(classCode);
+        List<Document> attendances = attendanceRepository.findBySessionId(sessionId);
+        
+        NotificationService notifService = new NotificationService();
+        long now = System.currentTimeMillis();
+        
+        for (Document enr : enrollments) {
+            String studentId = enr.getString("student_id");
+            if (studentId == null) continue;
+            
+            boolean attended = attendances.stream().anyMatch(a -> studentId.equals(a.getString("student_id")));
+            
+            if (!attended) {
+                // Insert ABSENT record
+                Document absentDoc = new Document()
+                        .append("session_id", sessionId)
+                        .append("student_id", studentId)
+                        .append("subject_code", subjectCode)
+                        .append("class_code", classCode)
+                        .append("method", "SYSTEM")
+                        .append("status", "ABSENT")
+                        .append("timestamp", now);
+                attendanceRepository.insert(absentDoc);
+                
+                // Count total absences for this student in this subject
+                List<Document> historyDocs = attendanceRepository.findByStudentId(studentId);
+                long absentCount = historyDocs.stream()
+                        .filter(a -> "ABSENT".equals(a.getString("status")))
+                        .filter(a -> subjectCode != null && subjectCode.equals(a.getString("subject_code")))
+                        .count() + 1; // +1 for the one we just inserted because historyDocs might not reflect it immediately if we just inserted it
+                
+                if (absentCount >= 2) {
+                    notifService.sendAbsenceWarning(studentId, subjectCode, (int) absentCount);
+                }
+            }
+        }
+    }
+
+    /**
      * Inner class cho thống kê chuyên cần
      */
     public static class AttendanceStatistics {

@@ -55,4 +55,10 @@ public class NotificationService {
     public void markAllAsRead(String studentId) {
         repository.markAllAsRead(studentId);
     }
+
+    public void sendAbsenceWarning(String studentId, String subjectCode, int absentCount) {
+        String title = "Cảnh báo vắng mặt";
+        String message = "Bạn đã vắng mặt " + absentCount + " buổi môn học " + subjectCode + ". Hãy chú ý đi học đầy đủ.";
+        repository.insertNotification(studentId, title, message, "ALERT", LocalDateTime.now());
+    }
 }

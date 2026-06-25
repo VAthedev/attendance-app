@@ -39,6 +39,10 @@ public class SessionCountdownService {
                     boolean closed = SessionRepository.getInstance().closeSession(sessionId);
                     if (closed) {
                         System.out.println("[SessionCountdown] Auto-closed session: " + sessionId);
+                        
+                        // Finalize attendance
+                        new service.AttendanceService().finalizeSessionAttendance(sessionId);
+                        
                         // Broadcast cho toan bo sinh vien
                         BroadcastManager.getInstance().broadcastAnnouncement("SESSION_CLOSED:" + sessionId);
                     }

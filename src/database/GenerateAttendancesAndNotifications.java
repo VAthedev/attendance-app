@@ -44,11 +44,10 @@ public class GenerateAttendancesAndNotifications {
 
             Random rand = new Random();
             List<Document> attendanceDocs = new ArrayList<>();
-            List<Document> notificationDocs = new ArrayList<>();
             LocalDate today = LocalDate.now();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-            System.out.println("Generating attendances and notifications...");
+            System.out.println("Generating attendances...");
             
             for (Document enr : allEnrollments) {
                 String studentId = enr.getString("student_id");
@@ -113,24 +112,11 @@ public class GenerateAttendancesAndNotifications {
                         }
                     }
                 }
-                
-                if (absentCount >= 2) {
-                    Document notif = new Document("_id", new ObjectId().toHexString())
-                            .append("studentId", studentId)
-                            .append("title", "Cảnh báo vắng mặt")
-                            .append("message", "Bạn đã vắng mặt " + absentCount + " buổi môn học " + subjectCode + ". Hãy chú ý đi học đầy đủ.")
-                            .append("type", "ALERT")
-                            .append("isRead", false)
-                            .append("createdAt", LocalDateTime.now().minusDays(rand.nextInt(3)).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
-                    notificationDocs.add(notif);
-                }
             }
 
             if (!attendanceDocs.isEmpty()) attendances.insertMany(attendanceDocs);
-            if (!notificationDocs.isEmpty()) notifications.insertMany(notificationDocs);
 
             System.out.println("Generated " + attendanceDocs.size() + " attendances.");
-            System.out.println("Generated " + notificationDocs.size() + " notifications.");
             System.out.println("Done!");
 
         } catch (Exception e) {

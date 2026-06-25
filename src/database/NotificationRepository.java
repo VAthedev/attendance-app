@@ -55,13 +55,14 @@ public class NotificationRepository {
             );
     }
 
-    private Document createDoc(String studentId, String title, String message, String type, LocalDateTime time) {
-        return new Document("_id", new ObjectId().toHexString())
+    public void insertNotification(String studentId, String title, String message, String type, LocalDateTime time) {
+        Document doc = new Document("_id", new ObjectId().toHexString())
                 .append("studentId", studentId)
                 .append("title", title)
                 .append("message", message)
                 .append("type", type)
                 .append("isRead", false)
                 .append("createdAt", time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+        notificationsCollection.insertOne(doc);
     }
 }

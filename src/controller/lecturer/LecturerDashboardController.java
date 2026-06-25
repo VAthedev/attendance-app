@@ -50,7 +50,8 @@ public class LecturerDashboardController implements Initializable {
             DateTimeFormatter.ofPattern("EEEE, dd/MM/yyyy",
             new java.util.Locale("vi", "VN")));
         lblPageDate.setText(today);
-        loadDashboardData();
+        lblPageDate.setText(today);
+        // loadDashboardData() will be called in setUserInfo
     }
 
     public void setUserInfo(String fullName, String userCode, String token) {
@@ -69,6 +70,8 @@ public class LecturerDashboardController implements Initializable {
                 loadDashboardData();
             }
         });
+        
+        javafx.application.Platform.runLater(this::loadDashboardData);
     }
 
     @FXML
@@ -87,19 +90,119 @@ public class LecturerDashboardController implements Initializable {
     }
 
     private void loadDashboardData() {
-        lblTotalSubjects.setText("3");
-        lblTotalStudents.setText("87");
-        lblAvgAttendance.setText("82%");
-        lblAbsentWarning.setText("5");
+        String lecturerName = lblUserName.getText();
+        String lecturerId = lblUserCode.getText().replace("Ma GV: ", "").trim();
+        LocalDate today = LocalDate.now();
 
-        addScheduleItem("Lập trình mạng", "07:30 - 09:10", "P.201", "35 SV");
-        addScheduleItem("Cơ sở dữ liệu",  "09:30 - 11:10", "P.305", "30 SV");
+        if (lecturerName == null || lecturerName.isEmpty() || "Giang vien".equals(lecturerName)) {
+            return;
+        }
 
-        addActiveSession("Lập trình mạng", "Đang mở", "08:45", 12, 35);
+        new Thread(() -> {
+            try {
+                // 1. Fetch Today's Schedules
+                java.util.List<java.util.Map<String,Object>> schedules = database.ScheduleRepository.getInstance().findLecturerSchedulesByDate(lecturerName, today);
+                
+                com.mongodb.client.MongoCollection<org.bson.Document> enrollmentsCol = database.DatabaseHelper.getInstance().getEnrollmentsCollection();
+                com.mongodb.client.MongoCollection<org.bson.Document> attendanceCol = database.DatabaseHelper.getInstance().getAttendanceCollection();
 
-        addAbsentWarningRow("Nguyễn Văn A", "2151234567", "Lập trình mạng", 5, 10);
-        addAbsentWarningRow("Trần Thị B",   "2151234568", "Cơ sở dữ liệu",  4, 10);
-        addAbsentWarningRow("Lê Văn C",     "2151234569", "Giải thuật",      6, 12);
+                int totalStudentsAll = 0;
+                
+                final java.util.List<java.util.Map<String,String>> scheduleItemsData = new java.util.ArrayList<>();
+
+                for (java.util.Map<String,Object> sch : schedules) {
+                    String subject = (String) sch.get("subject");
+                    String room = (String) sch.get("room");
+                    String className = (String) sch.get("className");
+                    
+                    String periods = (String) sch.get("periods");
+                    String time = "N/A";
+                    if (periods != null) {
+                        try {
+                            String[] parts = periods.split(",");
+                            int startP = Integer.parseInt(parts[0].trim());
+                            int endP = Integer.parseInt(parts[parts.length-1].trim());
+                            time = getPeriodTime(startP, true) + " - " + getPeriodTime(endP, false);
+                        } catch (Exception e) {}
+                    }
+
+                    long studentCount = enrollmentsCol.countDocuments(com.mongodb.client.model.Filters.eq("subject_id", className));
+                    totalStudentsAll += studentCount;
+
+                    java.util.Map<String,String> item = new java.util.HashMap<>();
+                    item.put("subject", subject);
+                    item.put("time", time);
+                    item.put("room", room);
+                    item.put("students", studentCount + " SV");
+                    scheduleItemsData.add(item);
+                }
+                final int finalTotalStudentsAll = totalStudentsAll;
+
+                // 2. Fetch Active Sessions
+                java.util.List<org.bson.Document> activeSessions = database.SessionRepository.getInstance().findActiveSessions(lecturerId);
+                final java.util.List<java.util.Map<String,Object>> sessionItemsData = new java.util.ArrayList<>();
+                
+                for (org.bson.Document session : activeSessions) {
+                    String subject = session.getString("subject");
+                    long startMillis = session.getLong("start_time");
+                    String openTime = java.time.LocalTime.ofInstant(java.time.Instant.ofEpochMilli(startMillis), java.time.ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"));
+                    String sessionId = session.getString("_id");
+                    if (sessionId == null && session.getObjectId("_id") != null) sessionId = session.getObjectId("_id").toHexString();
+
+                    long checkedInCount = attendanceCol.countDocuments(com.mongodb.client.model.Filters.eq("session_id", sessionId));
+                    
+                    String className = session.getString("class_name");
+                    long totalCount = enrollmentsCol.countDocuments(com.mongodb.client.model.Filters.eq("subject_id", className));
+
+                    java.util.Map<String,Object> item = new java.util.HashMap<>();
+                    item.put("subject", subject);
+                    item.put("status", "Đang mở");
+                    item.put("openTime", openTime);
+                    item.put("checkedIn", (int)checkedInCount);
+                    item.put("total", (int)totalCount);
+                    sessionItemsData.add(item);
+                }
+
+                javafx.application.Platform.runLater(() -> {
+                    lblTotalSubjects.setText(String.valueOf(schedules.size()));
+                    lblTotalStudents.setText(String.valueOf(finalTotalStudentsAll));
+                    lblAvgAttendance.setText("--%");
+                    lblAbsentWarning.setText("0");
+
+                    boxTodaySchedule.getChildren().clear();
+                    if (scheduleItemsData.isEmpty()) {
+                        lblNoSchedule.setVisible(true); lblNoSchedule.setManaged(true);
+                    } else {
+                        lblNoSchedule.setVisible(false); lblNoSchedule.setManaged(false);
+                        for (java.util.Map<String,String> m : scheduleItemsData) {
+                            addScheduleItem(m.get("subject"), m.get("time"), m.get("room"), m.get("students"));
+                        }
+                    }
+
+                    boxActiveSessions.getChildren().clear();
+                    if (sessionItemsData.isEmpty()) {
+                        lblNoSession.setVisible(true); lblNoSession.setManaged(true);
+                    } else {
+                        lblNoSession.setVisible(false); lblNoSession.setManaged(false);
+                        for (java.util.Map<String,Object> m : sessionItemsData) {
+                            addActiveSession((String)m.get("subject"), (String)m.get("status"), (String)m.get("openTime"), (int)m.get("checkedIn"), (int)m.get("total"));
+                        }
+                    }
+
+                    boxAbsentWarning.getChildren().clear();
+                    lblNoWarning.setVisible(true); lblNoWarning.setManaged(true);
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private String getPeriodTime(int period, boolean isStart) {
+        String[] startTimes = {"07:30", "08:20", "09:10", "10:00", "10:50", "13:00", "13:50", "14:40", "15:40", "16:30"};
+        String[] endTimes = {"08:20", "09:10", "10:00", "10:50", "11:40", "13:50", "14:40", "15:30", "16:30", "17:20"};
+        if (period < 1 || period > 10) return "00:00";
+        return isStart ? startTimes[period - 1] : endTimes[period - 1];
     }
 
     private void addScheduleItem(String subject, String time, String room, String students) {
