@@ -1,70 +1,64 @@
-﻿# Attendance App - He thong TKB va Diem danh
+# Attendance App - Hệ Thống Quản Lý & Điểm Danh (Tích Hợp AI)
 
-## Tong quan
-Ung dung desktop JavaFX + server socket cho cham cong, lich hoc va thong bao.
+## Tổng quan
+Ứng dụng Desktop JavaFX kết hợp với Server Socket xử lý đồng thời tính năng chấm công, quản lý lịch học, thông báo, chatbot AI và nhận diện khuôn mặt.
 
-## Cong nghe su dung
-| Tang      | Cong nghe                         |
+## Công nghệ sử dụng
+| Tầng      | Công nghệ                         |
 |-----------|-----------------------------------|
 | UI        | JavaFX 21 + FXML                  |
-| Mang      | TCP Socket + TLS/SSL              |
+| Mạng      | TCP Socket + TLS/SSL              |
 | CSDL      | MongoDB Atlas + MongoDB Driver    |
-| Bao mat   | SHA-256, AES-128, Nonce           |
-| Email     | JavaMail (SMTP)                   |
-| Xuat file  | Apache POI (Excel), OpenCSV       |
+| Bảo mật   | SHA-256, AES-128, Nonce           |
+| Trợ lý AI | LangChain4j + Google Gemini 2.5   |
+| AI Face   | Python (FastAPI, dlib, OpenCV)    |
+| Xuất file | Apache POI (Excel), OpenCSV       |
 
-## Cau hinh MongoDB
-Project dung MongoDB Atlas. URI mac dinh da duoc cau hinh trong [src/database/DatabaseHelper.java](src/database/DatabaseHelper.java).
+## Cấu hình
+1. **MongoDB**: Project dùng MongoDB Atlas. URI được cấu hình trong `src/database/DatabaseHelper.java`. (Ghi đè bằng biến môi trường `ATTENDANCE_MONGODB_URI`).
+2. **Gemini AI**: Khởi tạo API key trong `VirtualAssistant.java` hoặc sử dụng biến môi trường `GEMINI_API_KEY`.
 
-Neu muon doi URI ma khong sua code, set bien moi truong `ATTENDANCE_MONGODB_URI` truoc khi chay server.
+## Yêu cầu hệ thống
+- Java 21 LTS & Maven 3.9+
+- Python 3.10+ (Dành cho Server nhận diện khuôn mặt)
 
-## Thu vien can co trong `lib/`
-- `mongodb-driver-sync-4.11.1.jar`
-- `mongodb-driver-core-4.11.1.jar`
-- `bson-4.11.1.jar`
-- JavaFX SDK 21 trong `lib/javafx-sdk-21/`
+---
 
-## Cach chay
-### Trong VS Code
-1. Mo `Run and Debug`.
-2. Chon `Launch Server`.
-3. Chay `Launch Client (JavaFX)`.
+## Hướng dẫn chạy Ứng dụng
 
-### Bang PowerShell
-Compile (khuyen dung Maven, vi pom.xml da co Apache POI + JavaFX):
+Dự án này sử dụng Maven để quản lý tự động toàn bộ thư viện (MongoDB, LangChain4j, Apache POI, v.v...). Do đó, **bạn nên sử dụng Maven để chạy ứng dụng thay vì gọi lệnh `java` thủ công.**
+
+### 1. Khởi động AI Face Recognition Server (Python)
+Chức năng điểm danh khuôn mặt yêu cầu server Python chạy ngầm.
+Mở 1 cửa sổ PowerShell mới:
 ```powershell
-mvn -q -DskipTests compile
+cd face_recognition_service
+pip install -r requirements.txt
+python main.py
+```
+*(Lưu ý: Quá trình cài đặt thư viện dlib và face_recognition_models có thể mất vài phút).*
+
+### 2. Khởi động Backend Server (Java)
+Mở 1 cửa sổ PowerShell mới tại thư mục gốc của dự án:
+```powershell
+mvn compile
+mvn exec:java "-Dexec.mainClass=server.Server"
 ```
 
-Chay server:
+### 3. Khởi động Client App (JavaFX)
+Mở 1 cửa sổ PowerShell mới tại thư mục gốc của dự án:
 ```powershell
-java -cp "target/classes;lib\*" server.Server
+mvn compile
+mvn exec:java "-Dexec.mainClass=client.Main"
 ```
 
-Chay client:
-```powershell
-java --module-path "lib\javafx-sdk-21\lib" --add-modules javafx.controls,javafx.fxml -cp "target/classes;lib\*" client.Main
-```
+---
 
-Neu ban van muon dung `javac` thu cong, can bo sung them cac file jar Apache POI vao `lib/` (vi `javac` khong tu tai dependency tu `pom.xml`).
+## Tính năng nổi bật
+- **Điểm danh bằng khuôn mặt:** Quét hình ảnh từ Camera, so khớp với CSDL và trả về thông tin qua FastAPI.
+- **Trợ lý học vụ AI (Floating Widget):** Tích hợp Google Gemini 2.5 Flash thông qua LangChain4j, giúp sinh viên tra cứu và hỏi đáp tự nhiên.
+- **Tương tác thời gian thực:** Mọi thông báo được đẩy ngay lập tức qua Socket.
 
-## Yeu cau
-- Java 21 LTS (Long-Term Support, hỗ trợ đến 2031)
-- JavaFX SDK 21
-- MongoDB Atlas hoac MongoDB compatible connection string
-- VS Code + Extension Pack for Java
-- Maven 3.9+ (hoặc sử dụng Maven Wrapper)
-
-## Ghi chu
-- Neu VS Code chua nhan jar moi, chay lenh `Java: Clean Java Language Server Workspace` va reload workspace.
-- Thu muc `bin/` duoc dung de chua class da compile.
-
-## Nang cap Java
-- **2026-06-19**: Nâng cấp từ Java 17 lên Java 21 LTS
-  - Hỗ trợ Long-Term Support đến 2031
-  - Cải tiến hiệu suất và tính năng mới (Virtual Threads, Records, Pattern Matching)
-
-## Thanh vien nhom
-| Ten | MSSV | Phan cong |
-|-----|------|-----------|
-|     |      |           |
+## Nâng cấp gần đây
+- **2026-06-30**: Nâng cấp Chatbot AI lên Google Gemini 2.5 Flash. Tái cấu trúc thành Floating Widget.
+- **2026-06-19**: Nâng cấp dự án từ Java 17 lên Java 21 LTS (Long-Term Support).

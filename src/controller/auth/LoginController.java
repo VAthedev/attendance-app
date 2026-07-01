@@ -201,7 +201,12 @@ public class LoginController implements Initializable {
                 controller.setUserInfo(fullName, !studentId.isBlank() ? studentId : (!username.isBlank() ? username : String.valueOf(response.getDataValue("userId"))), token);
             }
         } catch (Exception e) {
-            showError("Loi: " + e.getMessage());
+            e.printStackTrace();
+            Throwable rootCause = e;
+            while (rootCause.getCause() != null) {
+                rootCause = rootCause.getCause();
+            }
+            showError("Loi: " + e.getMessage() + "\nChi tiet: " + rootCause.getMessage());
         }
     }
 

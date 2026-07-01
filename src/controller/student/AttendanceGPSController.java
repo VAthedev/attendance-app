@@ -548,34 +548,35 @@ public class AttendanceGPSController implements Initializable {
             
         final String finalMethod = method;
 
-        try {
-            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/student/CameraAttendance.fxml"));
-            javafx.scene.Parent root = loader.load();
+        javafx.application.Platform.runLater(() -> {
+            try {
+                javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/student/CameraAttendance.fxml"));
+                javafx.scene.Parent root = loader.load();
 
-            controller.student.CameraAttendanceController controller = loader.getController();
-            controller.setOnSuccessCallback(() -> {
-                submitAttendance(finalMethod);
-            });
+                controller.student.CameraAttendanceController controller = loader.getController();
+                controller.setOnSuccessCallback(() -> {
+                    submitAttendance(finalMethod);
+                });
 
-            javafx.stage.Stage stage = new javafx.stage.Stage();
-            stage.setTitle("Nhận diện khuôn mặt");
-            stage.initOwner(btnCheckin.getScene().getWindow());
-            stage.initModality(javafx.stage.Modality.WINDOW_MODAL);
-            stage.setScene(new javafx.scene.Scene(root));
-            
-            stage.showAndWait();
-            
-            // Chạy sau khi cửa sổ camera bị đóng
-            if (!boxSuccess.isVisible() && !btnCheckin.getText().equals("Đang điểm danh...")) {
+                javafx.stage.Stage stage = new javafx.stage.Stage();
+                stage.setTitle("Nhận diện khuôn mặt");
+                stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+                stage.setScene(new javafx.scene.Scene(root));
+                
+                stage.showAndWait();
+                
+                // Chạy sau khi cửa sổ camera bị đóng
+                if (!boxSuccess.isVisible() && !btnCheckin.getText().equals("Đang điểm danh...")) {
+                    btnCheckin.setDisable(false);
+                    btnCheckin.setText("Điểm danh ngay");
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
+                showError("Không thể mở cửa sổ Camera: " + e.getMessage());
                 btnCheckin.setDisable(false);
                 btnCheckin.setText("Điểm danh ngay");
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            showError("Không thể mở cửa sổ Camera: " + e.getMessage());
-            btnCheckin.setDisable(false);
-            btnCheckin.setText("Điểm danh ngay");
-        }
+        });
     }
 
     private void submitAttendance(String finalMethod) {
@@ -604,10 +605,22 @@ public class AttendanceGPSController implements Initializable {
                         if (countdownTimeline != null) {
                             countdownTimeline.stop();
                         }
+                        
+                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                        alert.setTitle("Thông báo");
+                        alert.setHeaderText(null);
+                        alert.setContentText("Điểm danh thành công!");
+                        alert.showAndWait();
                     } else {
                         btnCheckin.setDisable(false);
                         btnCheckin.setText("Điểm danh ngay");
                         showError(res.getMessage());
+                        
+                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
+                        alert.setTitle("Thông báo");
+                        alert.setHeaderText(null);
+                        alert.setContentText(res.getMessage());
+                        alert.showAndWait();
                     }
                 });
             } catch (Exception e) {
@@ -615,6 +628,12 @@ public class AttendanceGPSController implements Initializable {
                     btnCheckin.setDisable(false);
                     btnCheckin.setText("Điểm danh ngay");
                     showError("Lỗi kết nối server: " + e.getMessage());
+                    
+                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+                    alert.setTitle("Lỗi kết nối");
+                    alert.setHeaderText(null);
+                    alert.setContentText("Lỗi kết nối server: " + e.getMessage());
+                    alert.showAndWait();
                 });
             }
         }).start();

@@ -333,6 +333,7 @@ public class ClientHandler implements Runnable {
             
             // Lên lịch tự động đóng phiên
             SessionCountdownService.getInstance().scheduleSessionClose(sessionId, duration);
+            BroadcastManager.getInstance().broadcastAnnouncement("SESSION_OPENED");
             
             Response res = Response.ok("Mở phiên điểm danh thành công.");
             res.putPayload("session_id", sessionId);
@@ -353,6 +354,7 @@ public class ClientHandler implements Runnable {
         boolean success = database.SessionRepository.getInstance().closeSession(sessionId);
         if (success) {
             new service.AttendanceService().finalizeSessionAttendance(sessionId);
+            BroadcastManager.getInstance().broadcastAnnouncement("SESSION_CLOSED:" + sessionId);
             return Response.ok("Đã đóng phiên điểm danh.");
         } else {
             return Response.error("Không thể đóng phiên (không tồn tại hoặc đã đóng).");
@@ -423,7 +425,8 @@ public class ClientHandler implements Runnable {
             
             return Response.ok("Điểm danh thành công!");
         } catch (IllegalStateException e) {
-            if (e.getMessage().contains("device_id")) {
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("device_id")) {
                 return Response.error("Thiết bị này đã được sử dụng để điểm danh cho người khác trong phiên này!");
             }
             return Response.error("Bạn đã điểm danh trong phiên này rồi.");

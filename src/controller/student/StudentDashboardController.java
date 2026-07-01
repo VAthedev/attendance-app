@@ -73,9 +73,20 @@ public class StudentDashboardController implements Initializable {
                         javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
                         alert.setTitle("Thông báo Điểm danh");
                         alert.setHeaderText("Phiên điểm danh đã đóng");
-                        alert.setContentText("Hệ thống đã tự động đóng phiên điểm danh (hết giờ).");
+                        alert.setContentText("Hệ thống đã tự động đóng phiên điểm danh.");
                         alert.show();
                         showDashboard(); // Đẩy user về màn hình chính
+                    });
+                } else if (message != null && message.equals("SESSION_OPENED")) {
+                    javafx.application.Platform.runLater(() -> {
+                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                        alert.setTitle("Thông báo Điểm danh");
+                        alert.setHeaderText("Phiên điểm danh mới");
+                        alert.setContentText("Giảng viên vừa mở một phiên điểm danh mới! Vui lòng tải lại trang.");
+                        alert.show();
+                        if (lblPageTitle.getText().equals("Điểm danh")) {
+                            showAttendance(); // Tự động reload trang điểm danh
+                        }
                     });
                 }
             }
@@ -212,8 +223,17 @@ public class StudentDashboardController implements Initializable {
     @FXML private void showScheduleSubject() { setActiveBtn(btnScheduleSubject); lblPageTitle.setText("TKB theo môn");        loadSubPane("/fxml/student/ScheduleSubject.fxml"); }
     @FXML private void showHistory()         { setActiveBtn(btnHistory);         lblPageTitle.setText("Lịch sử điểm danh");  loadSubPane("/fxml/student/AttendanceHistory.fxml"); }
     @FXML private void showStats()           { setActiveBtn(btnStats);           lblPageTitle.setText("Thống kê chuyên cần"); loadSubPane("/fxml/student/AttendanceStats.fxml"); }
-    @FXML private void showChat()            { setActiveBtn(btnChat);            lblPageTitle.setText("Chat nội bộ lớp học"); loadSubPane("/fxml/shared/Chat.fxml"); }
+    @FXML private void showChat()            { setActiveBtn(btnChat);            lblPageTitle.setText("Chat lớp học"); loadSubPane("/fxml/shared/Chat.fxml"); }
     @FXML private void showNotification()    { setActiveBtn(btnNotification);    lblPageTitle.setText("Thông báo");           loadSubPane("/fxml/student/Notification.fxml"); }
+
+    @FXML private StackPane aiChatWidget;
+    @FXML public void toggleAIChat() {
+        if (aiChatWidget != null) {
+            boolean isVisible = !aiChatWidget.isVisible();
+            aiChatWidget.setVisible(isVisible);
+            aiChatWidget.setManaged(isVisible);
+        }
+    }
 
     @FXML private void handleLogout() {
         loadScene("/fxml/auth/Login.fxml", "Dang nhap");

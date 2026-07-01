@@ -44,9 +44,7 @@ public class AttendanceRepository {
 			return true;
 		} catch (MongoWriteException e) {
 			if (e.getError().getCategory() == ErrorCategory.DUPLICATE_KEY) {
-				throw new IllegalStateException(
-					"Diem danh bi trung: (session_id, student_id) hoac (session_id, device_id).", e
-				);
+				throw new IllegalStateException(e.getMessage(), e);
 			}
 			throw e;
 		}
@@ -65,9 +63,7 @@ public class AttendanceRepository {
 			return result.getModifiedCount() > 0;
 		} catch (MongoWriteException e) {
 			if (e.getError().getCategory() == ErrorCategory.DUPLICATE_KEY) {
-				throw new IllegalStateException(
-					"Cap nhat diem danh bi trung: (session_id, student_id) hoac (session_id, device_id).", e
-				);
+				throw new IllegalStateException(e.getMessage(), e);
 			}
 			throw e;
 		}
@@ -110,7 +106,13 @@ public class AttendanceRepository {
 		try {
 			Document user = usersCollection.find(Filters.eq("_id", userId)).first();
 			if (user == null) {
-				throw new IllegalStateException("Khong tim thay user tham chieu: " + userId);
+				try {
+					int idInt = Integer.parseInt(userId);
+					user = usersCollection.find(Filters.eq("id", idInt)).first();
+				} catch (NumberFormatException ignored) {}
+			}
+			if (user == null) {
+				throw new IllegalArgumentException("Khong tim thay user tham chieu: " + userId);
 			}
 		} catch (MongoException e) {
 			throw new RuntimeException("Loi kiem tra tham chieu users: " + e.getMessage(), e);
