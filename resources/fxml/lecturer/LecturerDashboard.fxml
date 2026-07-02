@@ -4,10 +4,11 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml"
+<StackPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="controller.lecturer.LecturerDashboardController"
             prefWidth="1100" prefHeight="680"
             stylesheets="@../../css/main.css">
+    <BorderPane>
 
     <!-- ===== SIDEBAR ===== -->
     <left>
@@ -164,4 +165,24 @@
         </VBox>
     </center>
 
-</BorderPane>
+    </BorderPane>
+
+    <!-- FLOATING AI CHAT WIDGET -->
+    <StackPane fx:id="aiChatWidget" maxHeight="500" maxWidth="400"
+          StackPane.alignment="BOTTOM_RIGHT" visible="false" managed="false"
+          style="-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 20, 0, 0, 10); -fx-background-radius: 10; -fx-border-radius: 10; -fx-background-color: transparent;">
+        <StackPane.margin>
+            <Insets bottom="90" right="30"/>
+        </StackPane.margin>
+        <fx:include source="../Chatbot.fxml"/>
+    </StackPane>
+
+    <!-- FLOATING AI BUTTON -->
+    <Button text="🤖 AI Trợ lý" onAction="#toggleAIChat"
+            style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 50; -fx-font-weight: bold; -fx-padding: 15 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 5); -fx-font-size: 14px; -fx-cursor: hand;"
+            StackPane.alignment="BOTTOM_RIGHT">
+        <StackPane.margin>
+            <Insets bottom="30" right="30"/>
+        </StackPane.margin>
+    </Button>
+</StackPane>

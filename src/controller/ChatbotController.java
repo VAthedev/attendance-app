@@ -35,10 +35,17 @@ public class ChatbotController {
     public void initialize() {
         virtualAssistant = new VirtualAssistant();
         
-        // Lấy ID tự động từ StudentDashboard
+        // Lấy ID tự động từ StudentDashboard hoặc LecturerDashboard
         this.currentUserId = controller.student.StudentDashboardController.currentStudentId;
         if (this.currentUserId == null || this.currentUserId.isEmpty()) {
-            this.currentUserId = "SV_TEST";
+            String gvId = controller.lecturer.LecturerDashboardController.currentLecturerId;
+            String gvName = controller.lecturer.LecturerDashboardController.currentLecturerName;
+            if (gvId != null && !gvId.isEmpty()) {
+                this.currentUserId = "GV: " + gvName + " (" + gvId + ")";
+            }
+        }
+        if (this.currentUserId == null || this.currentUserId.isEmpty()) {
+            this.currentUserId = "USER_TEST";
         }
         
         chatListView.setCellFactory(param -> new ChatCell());

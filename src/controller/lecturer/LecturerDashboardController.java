@@ -40,6 +40,10 @@ public class LecturerDashboardController implements Initializable {
     @FXML private ScrollPane paneDashboard;
     @FXML private Label      paneComingSoon;
     @FXML private StackPane  contentArea;
+    @FXML private StackPane  aiChatWidget;
+
+    public static String currentLecturerId = "";
+    public static String currentLecturerName = "";
 
     private Node currentSubPane = null;
     private String sessionToken = "";
@@ -58,6 +62,8 @@ public class LecturerDashboardController implements Initializable {
         this.sessionToken = token;
         lblUserName.setText(fullName.isEmpty() ? "Giang vien" : fullName);
         lblUserCode.setText("Ma GV: " + userCode.replace("}", ""));
+        currentLecturerId = lblUserCode.getText().replace("Ma GV: ", "").trim();
+        currentLecturerName = lblUserName.getText();
 
         // Đăng ký PushListener để nhận thông báo thời gian thực
         client.network.SocketClient.getInstance().addPushListener(res -> {
@@ -298,6 +304,13 @@ public class LecturerDashboardController implements Initializable {
     @FXML private void showNotification()   { setActiveBtn(btnNotification);   lblPageTitle.setText("Thông báo");            loadSubPane("/fxml/student/Notification.fxml"); }
 
     @FXML private void handleLogout() { loadScene("/fxml/auth/Login.fxml", "Dang nhap"); }
+
+    @FXML
+    private void toggleAIChat() {
+        boolean isVisible = aiChatWidget.isVisible();
+        aiChatWidget.setVisible(!isVisible);
+        aiChatWidget.setManaged(!isVisible);
+    }
 
     private void showComing() {
         removeSubPane();

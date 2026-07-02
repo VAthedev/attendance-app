@@ -9,8 +9,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.bson.types.ObjectId;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class DatabaseTools {
 
@@ -256,5 +258,31 @@ public class DatabaseTools {
         return "Thông tin liên lạc của giảng viên " + lecturerName + ":\n" +
                "- Thư điện tử (Email): " + email + "\n" +
                "- Tài khoản Microsoft Teams: " + teams;
+    }
+
+    @Tool("Lấy lịch dạy của giảng viên trong tuần này (truyền vào lecturerName, ví dụ 'Nguyen Van A'). Lưu ý: Tên giảng viên được lưu trữ không có dấu, ví dụ 'Le Nguyen Minh Kiet' hoặc 'Nguyen Van A'. Nếu người dùng hỏi lịch dạy của chính họ, hãy tìm tên của họ từ userId ở đầu tin nhắn (ví dụ [Người dùng hiện tại có ID: GV: Nguyen Van A (GV001)] thì tên là 'Nguyen Van A').")
+    public String getLecturerSchedule(String lecturerName) {
+        if (lecturerName == null || lecturerName.isEmpty()) return "Không có tên giảng viên.";
+        LocalDate today = LocalDate.now();
+        LocalDate start = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        LocalDate end = start.plusDays(6);
+        
+        List<Map<String,Object>> schedules = database.ScheduleRepository.getInstance().findLecturerSchedulesInRange(lecturerName, start, end);
+        
+        if (schedules.isEmpty()) {
+            return "Tuần này giảng viên " + lecturerName + " không có lịch dạy nào.";
+        }
+        
+        JSONArray result = new JSONArray();
+        for (Map<String,Object> sch : schedules) {
+            JSONObject item = new JSONObject();
+            item.put("ngày", sch.get("date"));
+            item.put("môn học", sch.get("subject"));
+            item.put("lớp", sch.get("className"));
+            item.put("phòng", sch.get("room"));
+            item.put("tiết", sch.get("periods"));
+            result.put(item);
+        }
+        return result.toString();
     }
 }
