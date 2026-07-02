@@ -30,6 +30,7 @@ public class VirtualAssistant {
         String apiKey = System.getenv("GEMINI_API_KEY");
         if (apiKey == null || apiKey.isEmpty()) {
             System.err.println("CẢNH BÁO: Chưa thiết lập GEMINI_API_KEY trong biến môi trường.");
+            return;
         }
 
         ChatLanguageModel model = GoogleAiGeminiChatModel.builder()
