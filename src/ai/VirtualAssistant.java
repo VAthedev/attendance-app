@@ -26,10 +26,31 @@ public class VirtualAssistant {
         init();
     }
 
-    private void init() {
+    private String getApiKey() {
         String apiKey = System.getenv("GEMINI_API_KEY");
+        if (apiKey != null && !apiKey.isEmpty()) {
+            return apiKey;
+        }
+        try {
+            java.io.File envFile = new java.io.File(".env");
+            if (envFile.exists()) {
+                java.util.List<String> lines = java.nio.file.Files.readAllLines(envFile.toPath());
+                for (String line : lines) {
+                    if (line.trim().startsWith("GEMINI_API_KEY=")) {
+                        return line.split("=", 2)[1].trim();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi đọc file .env: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private void init() {
+        String apiKey = getApiKey();
         if (apiKey == null || apiKey.isEmpty()) {
-            System.err.println("CẢNH BÁO: Chưa thiết lập GEMINI_API_KEY trong biến môi trường.");
+            System.err.println("CẢNH BÁO: Chưa thiết lập GEMINI_API_KEY trong biến môi trường hoặc file .env.");
             return;
         }
 
