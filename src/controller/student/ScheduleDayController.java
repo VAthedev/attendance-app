@@ -198,7 +198,7 @@ public class ScheduleDayController implements Initializable {
         subjectInfo.setStyle("-fx-hgrow: ALWAYS;");
         Label subject = new Label(schedule.subject);
         subject.getStyleClass().add("schedule-subject-large");
-        Label lecturer = new Label("👨‍🏫  " + schedule.lecturer);
+        Label lecturer = new Label("👤  " + schedule.lecturer);
         lecturer.getStyleClass().add("schedule-lecturer");
         subjectInfo.getChildren().addAll(subject, lecturer);
 
@@ -212,7 +212,7 @@ public class ScheduleDayController implements Initializable {
         HBox detailRow = new HBox(24);
         detailRow.setStyle("-fx-padding: 0 0 0 100px;");
 
-        Label room = new Label("🏫  Phòng: " + schedule.room);
+        Label room = new Label("P. " + schedule.room);
         room.getStyleClass().add("schedule-location");
         Label classInfo = new Label("👥  Lớp: " + schedule.className);
         classInfo.getStyleClass().add("schedule-location");

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<HBox spacing="16" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.widgets.StatsWidgetController">
+    <VBox styleClass="stat-card,stat-card-blue" HBox.hgrow="ALWAYS" spacing="8" prefWidth="200">
+        <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+        <Label text="📚" styleClass="stat-card-icon"/>
+        <Label fx:id="lblTotalSubjects" text="0" styleClass="stat-card-number"/>
+        <Label text="Môn học đang dạy" styleClass="stat-card-label"/>
+    </VBox>
+    <VBox styleClass="stat-card,stat-card-green" HBox.hgrow="ALWAYS" spacing="8" prefWidth="200">
+        <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+        <Label text="👥" styleClass="stat-card-icon"/>
+        <Label fx:id="lblTotalStudents" text="0" styleClass="stat-card-number"/>
+        <Label text="Tổng sinh viên" styleClass="stat-card-label"/>
+    </VBox>
+    <VBox styleClass="stat-card,stat-card-amber" HBox.hgrow="ALWAYS" spacing="8" prefWidth="200">
+        <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+        <Label text="✅" styleClass="stat-card-icon"/>
+        <Label fx:id="lblAvgAttendance" text="0%" styleClass="stat-card-number"/>
+        <Label text="Tỉ lệ có mặt TB" styleClass="stat-card-label"/>
+    </VBox>
+    <VBox styleClass="stat-card,stat-card-amber" HBox.hgrow="ALWAYS" spacing="8">
+        <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+        <Label text="⚠" styleClass="stat-card-icon"/>
+        <Label fx:id="lblAbsentCount" text="0" styleClass="stat-card-number"/>
+        <Label text="Cảnh báo vắng" styleClass="stat-card-label"/>
+    </VBox>
+</HBox>

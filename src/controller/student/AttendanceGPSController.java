@@ -344,11 +344,12 @@ public class AttendanceGPSController implements Initializable {
     private void checkAndShowWarnings(long secondsRemaining) {
         if (secondsRemaining <= WARNING_THRESHOLD_SECONDS && !isWarningShown && secondsRemaining > 0) {
             isWarningShown = true;
-            showTimerWarning("⚠️ CÒN " + (secondsRemaining / 60) + " PHÚT ĐỂ ĐIỂM DANH! ⚠️");
+            showTimerWarning("⚠ CÒN " + (secondsRemaining / 60) + " PHÚT ĐỂ ĐIỂM DANH! ⚠");
 
             lblHours.getStyleClass().add("warning");
             lblMinutes.getStyleClass().add("warning");
             lblSeconds.getStyleClass().add("warning");
+
             timerProgress.getStyleClass().add("warning");
         }
 

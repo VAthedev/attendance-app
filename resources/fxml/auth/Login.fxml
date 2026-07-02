@@ -28,15 +28,15 @@
                    textAlignment="CENTER"/>
 
             <HBox alignment="CENTER" spacing="12">
-                <VBox alignment="CENTER" styleClass="banner-stat">
+                <VBox alignment="CENTER" styleClass="banner-stat" minWidth="-Infinity">
                     <Label text="GPS" styleClass="stat-icon"/>
                     <Label text="Xác minh vị trí" styleClass="stat-label"/>
                 </VBox>
-                <VBox alignment="CENTER" styleClass="banner-stat">
+                <VBox alignment="CENTER" styleClass="banner-stat" minWidth="-Infinity">
                     <Label text="WiFi" styleClass="stat-icon"/>
                     <Label text="Kết nối nội bộ" styleClass="stat-label"/>
                 </VBox>
-                <VBox alignment="CENTER" styleClass="banner-stat">
+                <VBox alignment="CENTER" styleClass="banner-stat" minWidth="-Infinity">
                     <Label text="TLS" styleClass="stat-icon"/>
                     <Label text="Mã hóa bảo mật" styleClass="stat-label"/>
                 </VBox>
@@ -48,6 +48,7 @@
               HBox.hgrow="ALWAYS">
             <padding><Insets top="60" bottom="60" left="60" right="60"/></padding>
 
+            <VBox maxWidth="420" spacing="0" fillWidth="true">
             <!-- Header -->
             <VBox spacing="6" alignment="CENTER_LEFT">
                 <Label text="Đăng nhập" styleClass="form-title"/>
@@ -133,6 +134,7 @@
                 <Hyperlink text="Đăng ký ngay" styleClass="link-text"
                            onAction="#goToRegister"/>
             </HBox>
+            </VBox>
 
         </VBox>
     </HBox>

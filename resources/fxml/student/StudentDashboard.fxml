@@ -100,75 +100,10 @@
                 <!-- ===== TRANG TONG QUAN ===== -->
                 <ScrollPane fx:id="paneDashboard" fitToWidth="true"
                             styleClass="scroll-transparent" visible="true" managed="true">
-                    <VBox spacing="20">
+                    <FlowPane fx:id="widgetContainer" hgap="16" vgap="16">
                         <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
-
-                        <!-- Stats cards -->
-                        <HBox spacing="16">
-                            <VBox styleClass="stat-card,stat-card-blue" HBox.hgrow="ALWAYS" spacing="8">
-                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-                                <Label text="📅" styleClass="stat-card-icon"/>
-                                <Label fx:id="lblTotalSubjects" text="0" styleClass="stat-card-number"/>
-                                <Label text="Môn học đang học" styleClass="stat-card-label"/>
-                            </VBox>
-                            <VBox styleClass="stat-card,stat-card-green" HBox.hgrow="ALWAYS" spacing="8">
-                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-                                <Label text="✅" styleClass="stat-card-icon"/>
-                                <Label fx:id="lblAttendanceRate" text="0%" styleClass="stat-card-number"/>
-                                <Label text="Tỉ lệ có mặt TB" styleClass="stat-card-label"/>
-                            </VBox>
-                            <VBox styleClass="stat-card,stat-card-amber" HBox.hgrow="ALWAYS" spacing="8">
-                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-                                <Label text="⚠️" styleClass="stat-card-icon"/>
-                                <Label fx:id="lblAbsentCount" text="0" styleClass="stat-card-number"/>
-                                <Label text="Buổi vắng tháng này" styleClass="stat-card-label"/>
-                            </VBox>
-                            <VBox styleClass="stat-card,stat-card-red" HBox.hgrow="ALWAYS" spacing="8">
-                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-                                <Label text="🕐" styleClass="stat-card-icon"/>
-                                <Label fx:id="lblLateCount" text="0" styleClass="stat-card-number"/>
-                                <Label text="Buổi trễ tháng này" styleClass="stat-card-label"/>
-                            </VBox>
-                        </HBox>
-
-                        <!-- TKB hom nay + Diem danh hom nay -->
-                        <HBox spacing="16" VBox.vgrow="ALWAYS">
-
-                            <!-- TKB hom nay -->
-                            <VBox styleClass="dashboard-card" HBox.hgrow="ALWAYS" spacing="12">
-                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-                                <HBox alignment="CENTER_LEFT">
-                                    <Label text="📅  Lịch học hôm nay" styleClass="card-title" HBox.hgrow="ALWAYS"/>
-                                    <Hyperlink text="Xem tất cả" styleClass="link-text" onAction="#showScheduleDay"/>
-                                </HBox>
-                                <VBox fx:id="boxTodaySchedule" spacing="8"/>
-                                <Label fx:id="lblNoSchedule" text="Hôm nay không có lịch học 🎉"
-                                       styleClass="empty-label" visible="false" managed="false"/>
-                            </VBox>
-
-                            <!-- Diem danh gan day -->
-                            <VBox styleClass="dashboard-card" prefWidth="320" spacing="12">
-                                <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-                                <Label text="📋  Điểm danh gần đây" styleClass="card-title"/>
-                                <VBox fx:id="boxRecentAttendance" spacing="8"/>
-                                <Label fx:id="lblNoAttendance" text="Chưa có dữ liệu"
-                                       styleClass="empty-label" visible="false" managed="false"/>
-                            </VBox>
-                        </HBox>
-
-                        <!-- Thong bao -->
-                        <VBox styleClass="dashboard-card" spacing="12">
-                            <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
-                            <HBox alignment="CENTER_LEFT">
-                                <Label text="🔔  Thông báo mới nhất" styleClass="card-title" HBox.hgrow="ALWAYS"/>
-                                <Hyperlink text="Xem tất cả" styleClass="link-text" onAction="#showNotification"/>
-                            </HBox>
-                            <VBox fx:id="boxNotifications" spacing="8"/>
-                            <Label fx:id="lblNoNotif" text="Không có thông báo mới"
-                                   styleClass="empty-label" visible="false" managed="false"/>
-                        </VBox>
-
-                    </VBox>
+                        <!-- Dynamic widgets will be loaded here -->
+                    </FlowPane>
                 </ScrollPane>
 
                 <!-- Cac pane khac se them vao day -->

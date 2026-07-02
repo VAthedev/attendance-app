@@ -1,13 +1,9 @@
 package service;
 
 import model.Attendance;
-import model.Schedule;
-import model.Subject;
-import model.User;
 import database.AttendanceRepository;
+import database.DatabaseHelper;
 import org.bson.Document;
-import protocol.Request;
-import protocol.Response;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -17,6 +13,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import database.SessionRepository;
+
+// ===========================================================================
+// BUSINESS RULES (áp dụng từ 2026-07-02):
+//   1. Chỉ UNEXCUSED_ABSENT bị tính vào tỷ lệ % vắng (EXCUSED_ABSENT không tính)
+//   2. Mẫu số = total_sessions_planned từ collection subjects (theo kế hoạch)
+//   3. Ngưỡng STRICT: absenceRate > 0.20 (đúng 20% = an toàn; 20.1% = cảnh báo)
+// ===========================================================================
 
 public class AttendanceService {
 
@@ -257,51 +260,131 @@ public class AttendanceService {
     }
 
     /**
-     * Finalize attendance for a session, mark absent students, and send warnings if needed.
+     * Finalize attendance for a session:
+     *   - Đánh dấu UNEXCUSED_ABSENT cho sinh viên không điểm danh
+     *   - Tính tỷ lệ vắng dựa trên UNEXCUSED_ABSENT / total_sessions_planned
+     *   - Kích hoạt cảnh báo async nếu tỷ lệ > 20% (STRICT)
+     *
+     * Business Rules:
+     *   BR-1: Chỉ UNEXCUSED_ABSENT tính vào % vắng
+     *   BR-2: Mẫu số = subjects.total_sessions_planned (không phải số buổi thực tế)
+     *   BR-3: Threshold: absenceRate STRICTLY > 0.20 (đúng 20.0% = an toàn)
      */
     public void finalizeSessionAttendance(String sessionId) {
         Document sessionDoc = SessionRepository.getInstance().findById(sessionId);
         if (sessionDoc == null) return;
-        
-        String classCode = sessionDoc.getString("class_name");
+
+        String classCode   = sessionDoc.getString("class_name");
         String subjectCode = sessionDoc.getString("subject");
         if (classCode == null) return;
-        
+
         List<Document> enrollments = database.EnrollmentRepository.getInstance().findStudentsByClassCode(classCode);
         List<Document> attendances = attendanceRepository.findBySessionId(sessionId);
-        
-        NotificationService notifService = new NotificationService();
+
+        // BR-2: Lấy tổng buổi theo kế hoạch từ subjects collection
+        int totalPlannedSessions = getPlannedSessionCount(subjectCode, classCode);
+
         long now = System.currentTimeMillis();
-        
+
         for (Document enr : enrollments) {
             String studentId = enr.getString("student_id");
             if (studentId == null) continue;
-            
-            boolean attended = attendances.stream().anyMatch(a -> studentId.equals(a.getString("student_id")));
-            
+
+            boolean attended = attendances.stream()
+                    .anyMatch(a -> studentId.equals(a.getString("student_id")));
+
             if (!attended) {
-                // Insert ABSENT record
+                // BR-1: Ghi trạng thái UNEXCUSED_ABSENT (không phép) — duy nhất loại này tính vào %
                 Document absentDoc = new Document()
-                        .append("session_id", sessionId)
-                        .append("student_id", studentId)
+                        .append("session_id",  sessionId)
+                        .append("student_id",  studentId)
                         .append("subject_code", subjectCode)
-                        .append("class_code", classCode)
-                        .append("method", "SYSTEM")
-                        .append("status", "ABSENT")
-                        .append("timestamp", now);
+                        .append("class_code",   classCode)
+                        .append("method",       "SYSTEM")
+                        .append("status",       "UNEXCUSED_ABSENT")  // BR-1
+                        .append("timestamp",    now);
                 attendanceRepository.insert(absentDoc);
-                
-                // Count total absences for this student in this subject
+
+                // Tính tỷ lệ vắng chỉ với UNEXCUSED_ABSENT (BR-1)
                 List<Document> historyDocs = attendanceRepository.findByStudentId(studentId);
-                long absentCount = historyDocs.stream()
-                        .filter(a -> "ABSENT".equals(a.getString("status")))
+                long unexcusedAbsentCount = historyDocs.stream()
+                        .filter(a -> "UNEXCUSED_ABSENT".equals(a.getString("status")))
                         .filter(a -> subjectCode != null && subjectCode.equals(a.getString("subject_code")))
-                        .count() + 1; // +1 for the one we just inserted because historyDocs might not reflect it immediately if we just inserted it
-                
-                if (absentCount >= 2) {
-                    notifService.sendAbsenceWarning(studentId, subjectCode, (int) absentCount);
+                        .count() + 1; // +1 vì bản ghi vừa insert chưa phản ánh ngay
+
+                // BR-3: Strict > 20% (không phải >=)
+                if (totalPlannedSessions > 0) {
+                    double absenceRate = (double) unexcusedAbsentCount / totalPlannedSessions;
+                    if (absenceRate > 0.20) {  // STRICT greater-than
+                        triggerAbsenceAlertAsync(studentId, subjectCode,
+                                (int) unexcusedAbsentCount, totalPlannedSessions);
+                    }
                 }
             }
+        }
+    }
+
+    /**
+     * Lấy tổng số buổi học theo kế hoạch từ subjects.total_sessions_planned.
+     * Fallback: đếm số session CLOSED trong classCode nếu không có trường này.
+     * BR-2: dùng theo kế hoạch để tránh False Positive đầu học kỳ.
+     */
+    private int getPlannedSessionCount(String subjectCode, String classCode) {
+        if (subjectCode == null) return 0;
+        try {
+            Document subjectDoc = DatabaseHelper.getInstance()
+                    .getSubjectsCollection()
+                    .find(com.mongodb.client.model.Filters.eq("code", subjectCode))
+                    .first();
+            if (subjectDoc != null) {
+                Integer planned = subjectDoc.getInteger("total_sessions_planned");
+                if (planned != null && planned > 0) return planned;
+            }
+        } catch (Exception e) {
+            System.err.println("[AttendanceService] Không lấy được total_sessions_planned: " + e.getMessage());
+        }
+        // Fallback: đếm CLOSED sessions thực tế
+        try {
+            return (int) DatabaseHelper.getInstance().getSessionsCollection()
+                    .countDocuments(com.mongodb.client.model.Filters.and(
+                            com.mongodb.client.model.Filters.eq("class_name", classCode),
+                            com.mongodb.client.model.Filters.eq("subject", subjectCode),
+                            com.mongodb.client.model.Filters.eq("status", "CLOSED")
+                    ));
+        } catch (Exception e) {
+            System.err.println("[AttendanceService] Fallback count cũng thất bại: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Kích hoạt gửi email cảnh báo bất đồng bộ (KHÔNG block UI thread).
+     * Tra cứu email sinh viên từ users collection, sau đó gọi EmailService.sendAbsenceAlertAsync().
+     */
+    private void triggerAbsenceAlertAsync(String studentId, String subjectCode,
+                                          int absentCount, int totalPlannedSessions) {
+        try {
+            Document userDoc = DatabaseHelper.getInstance().getUsersCollection()
+                    .find(com.mongodb.client.model.Filters.or(
+                            com.mongodb.client.model.Filters.eq("id", studentId),
+                            com.mongodb.client.model.Filters.eq("_id", studentId)
+                    )).first();
+            if (userDoc == null) {
+                System.err.println("[AttendanceService] Không tìm thấy user: " + studentId);
+                return;
+            }
+            String email     = userDoc.getString("email");
+            String fullName  = userDoc.getString("full_name");
+            if (email == null || email.isBlank()) return;
+
+            EmailService.getInstance().sendAbsenceAlertAsync(
+                    studentId, fullName != null ? fullName : studentId, email,
+                    subjectCode, absentCount, totalPlannedSessions,
+                    msg -> System.out.println("[AttendanceService] Email OK: " + msg),
+                    err -> System.err.println("[AttendanceService] Email FAIL: " + err)
+            );
+        } catch (Exception e) {
+            System.err.println("[AttendanceService] triggerAbsenceAlertAsync lỗi: " + e.getMessage());
         }
     }
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox styleClass="dashboard-card" spacing="12" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.widgets.AbsentWarningWidgetController" prefWidth="700">
+    <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+    <HBox alignment="CENTER_LEFT">
+        <Label text="⚠  Sinh viên vắng nhiều cần chú ý"
+               styleClass="card-title" HBox.hgrow="ALWAYS"/>
+        <Hyperlink text="Xem tất cả" styleClass="link-text" onAction="#handleShowAll"/>
+    </HBox>
+    <VBox fx:id="boxAbsentWarning" spacing="0"/>
+    <Label fx:id="lblNoWarning" text="Không có sinh viên nào vắng quá ngưỡng"
+           styleClass="empty-label"/>
+</VBox>

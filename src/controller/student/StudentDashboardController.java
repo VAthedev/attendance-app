@@ -13,12 +13,20 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
+
 import util.FxmlUtil;
+import controller.widgets.StudentStatsWidgetController;
+import controller.widgets.StudentTodayScheduleWidgetController;
+import controller.widgets.StudentRecentAttendanceWidgetController;
+import controller.widgets.StudentNotificationsWidgetController;
 
 public class StudentDashboardController implements Initializable {
 
@@ -28,20 +36,23 @@ public class StudentDashboardController implements Initializable {
 
     @FXML private Label lblPageTitle, lblPageDate;
     @FXML private Label lblUserName, lblUserId;
-    @FXML private Label lblTotalSubjects, lblAttendanceRate;
-    @FXML private Label lblAbsentCount, lblLateCount;
-
-    @FXML private VBox  boxTodaySchedule, boxRecentAttendance, boxNotifications;
-    @FXML private Label lblNoSchedule, lblNoAttendance, lblNoNotif;
+    @FXML private Label lblNotifBadge;
 
     @FXML private ScrollPane paneDashboard;
     @FXML private Label      paneComingSoon;
-
-    // Content area de nhung man hinh con
-    @FXML private StackPane contentArea;
+    @FXML private StackPane  contentArea;
+    @FXML private StackPane  aiChatWidget;
+    @FXML private FlowPane   widgetContainer;
 
     private Node currentSubPane = null;
     public static String currentStudentId = "";
+
+    private static final String[] WIDGET_FXMLS = {
+        "/fxml/widgets/StudentStatsWidget.fxml",
+        "/fxml/widgets/StudentTodayScheduleWidget.fxml",
+        "/fxml/widgets/StudentRecentAttendanceWidget.fxml",
+        "/fxml/widgets/StudentNotificationsWidget.fxml"
+    };
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -55,7 +66,7 @@ public class StudentDashboardController implements Initializable {
         lblUserName.setText(fullName.isEmpty() ? "Sinh vien" : fullName);
         lblUserId.setText("MSSV: " + studentId);
         currentStudentId = studentId;
-        // Đăng ký PushListener để nhận thông báo thời gian thực
+        
         client.network.SocketClient.getInstance().addPushListener(res -> {
             if ("ANNOUNCEMENT".equals(res.getMessage())) {
                 String message = res.getDataValue("message");
@@ -75,7 +86,7 @@ public class StudentDashboardController implements Initializable {
                         alert.setHeaderText("Phiên điểm danh đã đóng");
                         alert.setContentText("Hệ thống đã tự động đóng phiên điểm danh.");
                         alert.show();
-                        showDashboard(); // Đẩy user về màn hình chính
+                        showDashboard(); 
                     });
                 } else if (message != null && message.equals("SESSION_OPENED")) {
                     javafx.application.Platform.runLater(() -> {
@@ -85,7 +96,7 @@ public class StudentDashboardController implements Initializable {
                         alert.setContentText("Giảng viên vừa mở một phiên điểm danh mới! Vui lòng tải lại trang.");
                         alert.show();
                         if (lblPageTitle.getText().equals("Điểm danh")) {
-                            showAttendance(); // Tự động reload trang điểm danh
+                            showAttendance(); 
                         }
                     });
                 }
@@ -96,112 +107,88 @@ public class StudentDashboardController implements Initializable {
     }
 
     private void loadDashboardData(String studentId) {
-        new Thread(() -> {
-            try {
-                java.time.LocalDate today = java.time.LocalDate.now();
-                java.util.List<java.util.Map<String,Object>> allSchedules = database.ScheduleRepository.getInstance()
-                        .findStudentSchedulesInRange(studentId, today.minusWeeks(2), today.plusWeeks(10));
-                
-                long subjectCount = allSchedules.stream().map(s -> s.get("subject")).distinct().count();
-                
-                java.util.List<java.util.Map<String,Object>> todaySchedules = database.ScheduleRepository.getInstance()
-                        .findStudentSchedulesByDate(studentId, today);
-                        
-                service.NotificationService notifService = new service.NotificationService();
-                java.util.List<model.Notification> notifications = notifService.getNotificationsForStudent(studentId);
-                
-                javafx.application.Platform.runLater(() -> {
-                    lblTotalSubjects.setText(String.valueOf(subjectCount));
+        if (studentId == null || studentId.isEmpty()) return;
+
+        javafx.application.Platform.runLater(() -> {
+            widgetContainer.getChildren().clear();
+            for (int i = 0; i < WIDGET_FXMLS.length; i++) {
+                loadWidget(WIDGET_FXMLS[i], i);
+            }
+        });
+    }
+
+    private void loadWidget(String fxmlPath, int index) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            Node widgetNode = loader.load();
+            
+            // Drag and Drop
+            setupDragAndDrop(widgetNode, index);
+            
+            // Pass data
+            Object controller = loader.getController();
+            if (controller instanceof StudentStatsWidgetController) {
+                ((StudentStatsWidgetController) controller).loadData(currentStudentId);
+            } else if (controller instanceof StudentTodayScheduleWidgetController) {
+                ((StudentTodayScheduleWidgetController) controller).loadData(currentStudentId);
+            } else if (controller instanceof StudentRecentAttendanceWidgetController) {
+                ((StudentRecentAttendanceWidgetController) controller).loadData(currentStudentId);
+            } else if (controller instanceof StudentNotificationsWidgetController) {
+                ((StudentNotificationsWidgetController) controller).loadData(currentStudentId);
+            }
+
+            widgetContainer.getChildren().add(widgetNode);
+        } catch (Exception e) {
+            System.err.println("Lỗi load widget " + fxmlPath + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void setupDragAndDrop(Node node, int index) {
+        node.setId("student_widget_" + index);
+        node.setStyle(node.getStyle() + "; -fx-cursor: hand;"); 
+
+        node.setOnDragDetected((MouseEvent event) -> {
+            Dragboard db = node.startDragAndDrop(TransferMode.MOVE);
+            ClipboardContent content = new ClipboardContent();
+            content.putString(node.getId());
+            db.setContent(content);
+            event.consume();
+        });
+
+        node.setOnDragOver((DragEvent event) -> {
+            if (event.getGestureSource() != node && event.getDragboard().hasString()) {
+                event.acceptTransferModes(TransferMode.MOVE);
+            }
+            event.consume();
+        });
+
+        node.setOnDragDropped((DragEvent event) -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasString()) {
+                String sourceId = db.getString();
+                Node sourceNode = widgetContainer.lookup("#" + sourceId);
+                if (sourceNode != null && sourceNode != node) {
+                    int sourceIndex = widgetContainer.getChildren().indexOf(sourceNode);
+                    int targetIndex = widgetContainer.getChildren().indexOf(node);
                     
-                    lblAttendanceRate.setText("100%");
-                    lblAbsentCount.setText("0");
-                    lblLateCount.setText("0");
+                    widgetContainer.getChildren().remove(sourceNode);
+                    widgetContainer.getChildren().remove(node);
                     
-                    boxTodaySchedule.getChildren().clear();
-                    if (todaySchedules.isEmpty()) {
-                        lblNoSchedule.setVisible(true);
-                        lblNoSchedule.setManaged(true);
+                    if (sourceIndex < targetIndex) {
+                        widgetContainer.getChildren().add(sourceIndex, node);
+                        widgetContainer.getChildren().add(targetIndex, sourceNode);
                     } else {
-                        lblNoSchedule.setVisible(false);
-                        lblNoSchedule.setManaged(false);
-                        for (java.util.Map<String,Object> s : todaySchedules) {
-                            String subject = (String) s.getOrDefault("subject", "Unnamed");
-                            String time = s.get("startTime") + " - " + s.get("endTime");
-                            String room = (String) s.getOrDefault("room", "");
-                            addScheduleItem(subject, time, room);
-                        }
+                        widgetContainer.getChildren().add(targetIndex, sourceNode);
+                        widgetContainer.getChildren().add(sourceIndex, node);
                     }
-                    
-                    boxRecentAttendance.getChildren().clear();
-                    boxNotifications.getChildren().clear();
-                    
-                    if (lblNoAttendance != null) {
-                        lblNoAttendance.setVisible(true);
-                        lblNoAttendance.setManaged(true);
-                    }
-                    
-                    if (notifications == null || notifications.isEmpty()) {
-                        if (lblNoNotif != null) {
-                            lblNoNotif.setVisible(true);
-                            lblNoNotif.setManaged(true);
-                        }
-                    } else {
-                        if (lblNoNotif != null) {
-                            lblNoNotif.setVisible(false);
-                            lblNoNotif.setManaged(false);
-                        }
-                        // Only show top 3 recent notifications on dashboard
-                        int count = Math.min(3, notifications.size());
-                        for (int i = 0; i < count; i++) {
-                            model.Notification n = notifications.get(i);
-                            String prefix = n.isRead() ? "" : "🔵 ";
-                            addNotificationItem(prefix + n.getTitle(), n.getMessage());
-                        }
-                    }
-                });
-            } catch(Exception e) { e.printStackTrace(); }
-        }).start();
-    }
-
-    private void addScheduleItem(String subject, String time, String room) {
-        HBox item = new HBox(12);
-        item.getStyleClass().add("schedule-item");
-        VBox info = new VBox(4);
-        HBox.setHgrow(info, Priority.ALWAYS);
-        Label s = new Label(subject); s.getStyleClass().add("schedule-subject");
-        Label t = new Label("⏰ " + time); t.getStyleClass().add("schedule-time");
-        info.getChildren().addAll(s, t);
-        Label r = new Label("🏫 " + room); r.getStyleClass().add("schedule-room");
-        item.getChildren().addAll(info, r);
-        boxTodaySchedule.getChildren().add(item);
-        lblNoSchedule.setVisible(false); lblNoSchedule.setManaged(false);
-    }
-
-    private void addAttendanceItem(String subject, String date, String status) {
-        HBox item = new HBox(12);
-        item.setStyle("-fx-padding:8 0 8 0;");
-        VBox info = new VBox(2);
-        HBox.setHgrow(info, Priority.ALWAYS);
-        Label s = new Label(subject); s.getStyleClass().add("schedule-subject");
-        Label d = new Label(date);    d.getStyleClass().add("schedule-time");
-        info.getChildren().addAll(s, d);
-        String cls  = switch(status) { case "PRESENT"->"badge-present"; case "ABSENT"->"badge-absent"; default->"badge-late"; };
-        String text = switch(status) { case "PRESENT"->"Có mặt"; case "ABSENT"->"Vắng"; default->"Trễ"; };
-        Label badge = new Label(text); badge.getStyleClass().add(cls);
-        item.getChildren().addAll(info, badge);
-        boxRecentAttendance.getChildren().add(item);
-    }
-
-    private void addNotificationItem(String title, String message) {
-        VBox item = new VBox(4);
-        item.setStyle("-fx-background-color:#f8fafc;-fx-background-radius:8;" +
-                      "-fx-padding:10 14 10 14;-fx-border-color:#e2e8f0;" +
-                      "-fx-border-radius:8;-fx-border-width:1;");
-        Label t = new Label(title);   t.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#1a2744;");
-        Label m = new Label(message); m.setStyle("-fx-font-size:12px;-fx-text-fill:#6b7a99;");
-        item.getChildren().addAll(t, m);
-        boxNotifications.getChildren().add(item);
-        lblNoNotif.setVisible(false); lblNoNotif.setManaged(false);
+                    success = true;
+                }
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
     }
 
     // ===== NAVIGATION =====
@@ -226,7 +213,6 @@ public class StudentDashboardController implements Initializable {
     @FXML private void showChat()            { setActiveBtn(btnChat);            lblPageTitle.setText("Chat lớp học"); loadSubPane("/fxml/shared/Chat.fxml"); }
     @FXML private void showNotification()    { setActiveBtn(btnNotification);    lblPageTitle.setText("Thông báo");           loadSubPane("/fxml/student/Notification.fxml"); }
 
-    @FXML private StackPane aiChatWidget;
     @FXML public void toggleAIChat() {
         if (aiChatWidget != null) {
             boolean isVisible = !aiChatWidget.isVisible();

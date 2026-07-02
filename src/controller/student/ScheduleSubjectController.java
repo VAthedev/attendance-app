@@ -163,7 +163,7 @@ public class ScheduleSubjectController implements Initializable {
             timeLabel.setStyle("-fx-text-fill: #6b7a99; -fx-font-size: 12px;");
 
             // Room
-            Label roomLabel = new Label("🏫  " + session.room);
+            Label roomLabel = new Label("P. " + session.room);
             roomLabel.setStyle("-fx-text-fill: #6b7a99; -fx-font-size: 12px;");
 
             // Status badge

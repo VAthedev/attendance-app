@@ -96,12 +96,11 @@ public class NotificationController implements Initializable {
             icon.setStyle("-fx-font-size: 24px;");
             String color = "#34495e";
             switch (notif.getType()) {
-                case "SUCCESS": icon.setText("✅"); color = "#27ae60"; break;
-                case "ALERT": icon.setText("⚠️"); color = "#e74c3c"; break;
-                case "INFO": default: icon.setText("ℹ️"); color = "#3498db"; break;
+                case "SUCCESS": icon.setText("✔"); color = "#2ecc71"; break;
+                case "INFO": icon.setText("i"); color = "#3498db"; break;
+                case "ALERT": icon.setText("⚠"); color = "#e74c3c"; break;
+                default: icon.setText("•"); color = "#95a5a6"; break;
             }
-
-            // Content
             VBox content = new VBox(5);
             HBox.setHgrow(content, Priority.ALWAYS);
 

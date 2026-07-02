@@ -330,7 +330,7 @@ public class AttendanceStatisticController implements Initializable {
         StringBuilder recommendation = new StringBuilder();
 
         if (poorRecords > 0) {
-            recommendation.append("⚠️ Bạn có ")
+            recommendation.append("⚠ Bạn có ")
                     .append(poorRecords)
                     .append(" môn có tỷ lệ chuyên cần dưới 60%. ")
                     .append("Hãy cố gắng tham gia đầy đủ các buổi học để cải thiện.");

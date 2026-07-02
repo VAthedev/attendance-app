@@ -245,8 +245,8 @@ public class ScheduleWeekController implements Initializable {
                     VBox info = new VBox(2);
                     Label subject = new Label(schedule.subject);
                     subject.setStyle("-fx-font-weight: bold; -fx-text-fill: #1a2744;");
-                    Label lecturer = new Label("👨‍🏫  " + schedule.lecturer);
-                    lecturer.setStyle("-fx-font-size: 11px; -fx-text-fill: #6b7a99;");
+                    Label lecturer = new Label("👤  " + schedule.lecturer);
+                    lecturer.setStyle("-fx-font-size:10px; -fx-text-fill:#6b7a99;");
                     info.getChildren().addAll(subject, lecturer);
 
                     Label status = new Label(schedule.status.equals("ATTENDED") ? "✅ Đã điểm danh" : 

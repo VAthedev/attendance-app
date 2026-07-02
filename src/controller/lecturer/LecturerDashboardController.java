@@ -13,13 +13,20 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
+
 import util.FxmlUtil;
+import controller.widgets.StatsWidgetController;
+import controller.widgets.TodayScheduleWidgetController;
+import controller.widgets.ActiveSessionsWidgetController;
+import controller.widgets.AbsentWarningWidgetController;
 
 public class LecturerDashboardController implements Initializable {
 
@@ -31,16 +38,12 @@ public class LecturerDashboardController implements Initializable {
     @FXML private Button btnQuickOpen;
 
     @FXML private Label lblUserName, lblUserCode;
-    @FXML private Label lblTotalSubjects, lblTotalStudents;
-    @FXML private Label lblAvgAttendance, lblAbsentWarning;
-
-    @FXML private VBox  boxTodaySchedule, boxActiveSessions, boxAbsentWarning;
-    @FXML private Label lblNoSchedule, lblNoSession, lblNoWarning;
 
     @FXML private ScrollPane paneDashboard;
     @FXML private Label      paneComingSoon;
     @FXML private StackPane  contentArea;
     @FXML private StackPane  aiChatWidget;
+    @FXML private FlowPane   widgetContainer;
 
     public static String currentLecturerId = "";
     public static String currentLecturerName = "";
@@ -48,14 +51,19 @@ public class LecturerDashboardController implements Initializable {
     private Node currentSubPane = null;
     private String sessionToken = "";
 
+    private static final String[] WIDGET_FXMLS = {
+        "/fxml/widgets/StatsWidget.fxml",
+        "/fxml/widgets/TodayScheduleWidget.fxml",
+        "/fxml/widgets/ActiveSessionsWidget.fxml",
+        "/fxml/widgets/AbsentWarningWidget.fxml"
+    };
+
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         String today = LocalDate.now().format(
             DateTimeFormatter.ofPattern("EEEE, dd/MM/yyyy",
             new java.util.Locale("vi", "VN")));
         lblPageDate.setText(today);
-        lblPageDate.setText(today);
-        // loadDashboardData() will be called in setUserInfo
     }
 
     public void setUserInfo(String fullName, String userCode, String token) {
@@ -65,7 +73,6 @@ public class LecturerDashboardController implements Initializable {
         currentLecturerId = lblUserCode.getText().replace("Ma GV: ", "").trim();
         currentLecturerName = lblUserName.getText();
 
-        // Đăng ký PushListener để nhận thông báo thời gian thực
         client.network.SocketClient.getInstance().addPushListener(res -> {
             if ("ANNOUNCEMENT".equals(res.getMessage()) && "SCHEDULE_UPDATED".equals(res.getDataValue("message"))) {
                 javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
@@ -96,190 +103,91 @@ public class LecturerDashboardController implements Initializable {
     }
 
     private void loadDashboardData() {
-        String lecturerName = lblUserName.getText();
-        String lecturerId = lblUserCode.getText().replace("Ma GV: ", "").trim();
-        LocalDate today = LocalDate.now();
-
-        if (lecturerName == null || lecturerName.isEmpty() || "Giang vien".equals(lecturerName)) {
+        if (currentLecturerName == null || currentLecturerName.isEmpty() || "Giang vien".equals(currentLecturerName)) {
             return;
         }
 
-        new Thread(() -> {
-            try {
-                // 1. Fetch Today's Schedules
-                java.util.List<java.util.Map<String,Object>> schedules = database.ScheduleRepository.getInstance().findLecturerSchedulesByDate(lecturerName, today);
-                
-                com.mongodb.client.MongoCollection<org.bson.Document> enrollmentsCol = database.DatabaseHelper.getInstance().getEnrollmentsCollection();
-                com.mongodb.client.MongoCollection<org.bson.Document> attendanceCol = database.DatabaseHelper.getInstance().getAttendanceCollection();
+        widgetContainer.getChildren().clear();
+        for (int i = 0; i < WIDGET_FXMLS.length; i++) {
+            loadWidget(WIDGET_FXMLS[i], i);
+        }
+    }
 
-                int totalStudentsAll = 0;
-                
-                final java.util.List<java.util.Map<String,String>> scheduleItemsData = new java.util.ArrayList<>();
-
-                for (java.util.Map<String,Object> sch : schedules) {
-                    String subject = (String) sch.get("subject");
-                    String room = (String) sch.get("room");
-                    String className = (String) sch.get("className");
-                    
-                    String periods = (String) sch.get("periods");
-                    String time = "N/A";
-                    if (periods != null) {
-                        try {
-                            String[] parts = periods.split(",");
-                            int startP = Integer.parseInt(parts[0].trim());
-                            int endP = Integer.parseInt(parts[parts.length-1].trim());
-                            time = getPeriodTime(startP, true) + " - " + getPeriodTime(endP, false);
-                        } catch (Exception e) {}
-                    }
-
-                    long studentCount = enrollmentsCol.countDocuments(com.mongodb.client.model.Filters.eq("subject_id", className));
-                    totalStudentsAll += studentCount;
-
-                    java.util.Map<String,String> item = new java.util.HashMap<>();
-                    item.put("subject", subject);
-                    item.put("time", time);
-                    item.put("room", room);
-                    item.put("students", studentCount + " SV");
-                    scheduleItemsData.add(item);
-                }
-                final int finalTotalStudentsAll = totalStudentsAll;
-
-                // 2. Fetch Active Sessions
-                java.util.List<org.bson.Document> activeSessions = database.SessionRepository.getInstance().findActiveSessions(lecturerId);
-                final java.util.List<java.util.Map<String,Object>> sessionItemsData = new java.util.ArrayList<>();
-                
-                for (org.bson.Document session : activeSessions) {
-                    String subject = session.getString("subject");
-                    long startMillis = session.getLong("start_time");
-                    String openTime = java.time.LocalTime.ofInstant(java.time.Instant.ofEpochMilli(startMillis), java.time.ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"));
-                    String sessionId = session.getString("_id");
-                    if (sessionId == null && session.getObjectId("_id") != null) sessionId = session.getObjectId("_id").toHexString();
-
-                    long checkedInCount = attendanceCol.countDocuments(com.mongodb.client.model.Filters.eq("session_id", sessionId));
-                    
-                    String className = session.getString("class_name");
-                    long totalCount = enrollmentsCol.countDocuments(com.mongodb.client.model.Filters.eq("subject_id", className));
-
-                    java.util.Map<String,Object> item = new java.util.HashMap<>();
-                    item.put("subject", subject);
-                    item.put("status", "Đang mở");
-                    item.put("openTime", openTime);
-                    item.put("checkedIn", (int)checkedInCount);
-                    item.put("total", (int)totalCount);
-                    sessionItemsData.add(item);
-                }
-
-                javafx.application.Platform.runLater(() -> {
-                    lblTotalSubjects.setText(String.valueOf(schedules.size()));
-                    lblTotalStudents.setText(String.valueOf(finalTotalStudentsAll));
-                    lblAvgAttendance.setText("--%");
-                    lblAbsentWarning.setText("0");
-
-                    boxTodaySchedule.getChildren().clear();
-                    if (scheduleItemsData.isEmpty()) {
-                        lblNoSchedule.setVisible(true); lblNoSchedule.setManaged(true);
-                    } else {
-                        lblNoSchedule.setVisible(false); lblNoSchedule.setManaged(false);
-                        for (java.util.Map<String,String> m : scheduleItemsData) {
-                            addScheduleItem(m.get("subject"), m.get("time"), m.get("room"), m.get("students"));
-                        }
-                    }
-
-                    boxActiveSessions.getChildren().clear();
-                    if (sessionItemsData.isEmpty()) {
-                        lblNoSession.setVisible(true); lblNoSession.setManaged(true);
-                    } else {
-                        lblNoSession.setVisible(false); lblNoSession.setManaged(false);
-                        for (java.util.Map<String,Object> m : sessionItemsData) {
-                            addActiveSession((String)m.get("subject"), (String)m.get("status"), (String)m.get("openTime"), (int)m.get("checkedIn"), (int)m.get("total"));
-                        }
-                    }
-
-                    boxAbsentWarning.getChildren().clear();
-                    lblNoWarning.setVisible(true); lblNoWarning.setManaged(true);
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
+    private void loadWidget(String fxmlPath, int index) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            Node widgetNode = loader.load();
+            
+            // Cho phép widget linh hoạt Drag & Drop
+            setupDragAndDrop(widgetNode, index);
+            
+            // Chuyển dữ liệu vào các Controller con
+            Object controller = loader.getController();
+            if (controller instanceof StatsWidgetController) {
+                ((StatsWidgetController) controller).loadData(currentLecturerName);
+            } else if (controller instanceof TodayScheduleWidgetController) {
+                ((TodayScheduleWidgetController) controller).loadData(currentLecturerName);
+            } else if (controller instanceof ActiveSessionsWidgetController) {
+                ((ActiveSessionsWidgetController) controller).loadData(currentLecturerId);
+            } else if (controller instanceof AbsentWarningWidgetController) {
+                ((AbsentWarningWidgetController) controller).loadData(currentLecturerId);
             }
-        }).start();
+
+            widgetContainer.getChildren().add(widgetNode);
+        } catch (Exception e) {
+            System.err.println("Lỗi load widget " + fxmlPath + ": " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
-    private String getPeriodTime(int period, boolean isStart) {
-        String[] startTimes = {"07:30", "08:20", "09:10", "10:00", "10:50", "13:00", "13:50", "14:40", "15:40", "16:30"};
-        String[] endTimes = {"08:20", "09:10", "10:00", "10:50", "11:40", "13:50", "14:40", "15:30", "16:30", "17:20"};
-        if (period < 1 || period > 10) return "00:00";
-        return isStart ? startTimes[period - 1] : endTimes[period - 1];
-    }
+    private void setupDragAndDrop(Node node, int index) {
+        node.setId("widget_" + index);
+        node.setStyle(node.getStyle() + "; -fx-cursor: hand;"); // Đổi con trỏ chuột khi chỉ vào
 
-    private void addScheduleItem(String subject, String time, String room, String students) {
-        HBox item = new HBox(12);
-        item.getStyleClass().add("schedule-item");
-        VBox info = new VBox(4);
-        HBox.setHgrow(info, Priority.ALWAYS);
-        Label s = new Label(subject); s.getStyleClass().add("schedule-subject");
-        Label t = new Label("⏰ " + time + "  🏫 " + room); t.getStyleClass().add("schedule-time");
-        info.getChildren().addAll(s, t);
-        Label sv = new Label("👥 " + students); sv.getStyleClass().add("schedule-room");
-        item.getChildren().addAll(info, sv);
-        boxTodaySchedule.getChildren().add(item);
-        lblNoSchedule.setVisible(false); lblNoSchedule.setManaged(false);
-    }
-
-    private void addActiveSession(String subject, String status, String openTime,
-                                   int checkedIn, int total) {
-        VBox card = new VBox(8);
-        card.setStyle("-fx-background-color:#f0fdf4;-fx-background-radius:8;" +
-                      "-fx-border-color:#86efac;-fx-border-radius:8;-fx-border-width:1;" +
-                      "-fx-padding:12 14 12 14;");
-        HBox top = new HBox(8);
-        Label lblSubject = new Label(subject);
-        lblSubject.setStyle("-fx-font-weight:bold;-fx-font-size:13px;-fx-text-fill:#14532d;");
-        HBox.setHgrow(lblSubject, Priority.ALWAYS);
-        Label lblStatus = new Label("● " + status);
-        lblStatus.setStyle("-fx-text-fill:#16a34a;-fx-font-size:12px;-fx-font-weight:bold;");
-        top.getChildren().addAll(lblSubject, lblStatus);
-        Label lblInfo = new Label("Mở lúc " + openTime + "  •  " + checkedIn + "/" + total + " SV đã điểm danh");
-        lblInfo.setStyle("-fx-font-size:12px;-fx-text-fill:#166534;");
-        double pct = total > 0 ? (double) checkedIn / total : 0;
-        StackPane progressBg = new StackPane();
-        progressBg.setStyle("-fx-background-color:#dcfce7;-fx-background-radius:4;-fx-pref-height:6;");
-        Region progressFill = new Region();
-        progressFill.setStyle("-fx-background-color:#16a34a;-fx-background-radius:4;-fx-pref-height:6;");
-        progressFill.setPrefWidth(240 * pct);
-        StackPane.setAlignment(progressFill, javafx.geometry.Pos.CENTER_LEFT);
-        progressBg.getChildren().add(progressFill);
-        Button btnClose = new Button("Đóng phiên");
-        btnClose.setStyle("-fx-background-color:#dc2626;-fx-text-fill:white;" +
-                          "-fx-background-radius:6;-fx-font-size:12px;-fx-cursor:hand;");
-        btnClose.setOnAction(e -> {
-            boxActiveSessions.getChildren().remove(card);
-            lblNoSession.setVisible(true);
+        node.setOnDragDetected((MouseEvent event) -> {
+            Dragboard db = node.startDragAndDrop(TransferMode.MOVE);
+            ClipboardContent content = new ClipboardContent();
+            content.putString(node.getId()); // Lưu ID của Widget đang bị kéo
+            db.setContent(content);
+            event.consume();
         });
-        card.getChildren().addAll(top, lblInfo, progressBg, btnClose);
-        boxActiveSessions.getChildren().add(card);
-        lblNoSession.setVisible(false); lblNoSession.setManaged(false);
-    }
 
-    private void addAbsentWarningRow(String name, String mssv, String subject,
-                                      int absent, int total) {
-        HBox row = new HBox(12);
-        row.setStyle("-fx-padding:10 4 10 4;-fx-border-color:transparent transparent #e2e8f0 transparent;-fx-border-width:1;");
-        row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        VBox info = new VBox(2);
-        HBox.setHgrow(info, Priority.ALWAYS);
-        Label n = new Label(name); n.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#1a2744;");
-        Label d = new Label(mssv + "  •  " + subject); d.setStyle("-fx-font-size:12px;-fx-text-fill:#6b7a99;");
-        info.getChildren().addAll(n, d);
-        Label lblAbsent = new Label(absent + "/" + total + " buổi vắng");
-        lblAbsent.setStyle("-fx-background-color:#fee2e2;-fx-text-fill:#dc2626;" +
-                           "-fx-background-radius:4;-fx-padding:3 8 3 8;-fx-font-size:12px;");
-        Button btnEmail = new Button("📧 Gửi cảnh báo");
-        btnEmail.setStyle("-fx-background-color:#fff7ed;-fx-text-fill:#c2410c;" +
-                          "-fx-background-radius:6;-fx-font-size:11px;-fx-cursor:hand;");
-        btnEmail.setOnAction(e -> { btnEmail.setText("✓ Đã gửi"); btnEmail.setDisable(true); });
-        row.getChildren().addAll(info, lblAbsent, btnEmail);
-        boxAbsentWarning.getChildren().add(row);
-        lblNoWarning.setVisible(false); lblNoWarning.setManaged(false);
+        node.setOnDragOver((DragEvent event) -> {
+            // Chấp nhận thả nếu không phải tự thả vào chính nó
+            if (event.getGestureSource() != node && event.getDragboard().hasString()) {
+                event.acceptTransferModes(TransferMode.MOVE);
+            }
+            event.consume();
+        });
+
+        node.setOnDragDropped((DragEvent event) -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasString()) {
+                String sourceId = db.getString();
+                Node sourceNode = widgetContainer.lookup("#" + sourceId);
+                if (sourceNode != null && sourceNode != node) {
+                    int sourceIndex = widgetContainer.getChildren().indexOf(sourceNode);
+                    int targetIndex = widgetContainer.getChildren().indexOf(node);
+                    
+                    // Hoán đổi vị trí trong FlowPane
+                    widgetContainer.getChildren().remove(sourceNode);
+                    widgetContainer.getChildren().remove(node);
+                    
+                    if (sourceIndex < targetIndex) {
+                        widgetContainer.getChildren().add(sourceIndex, node);
+                        widgetContainer.getChildren().add(targetIndex, sourceNode);
+                    } else {
+                        widgetContainer.getChildren().add(targetIndex, sourceNode);
+                        widgetContainer.getChildren().add(sourceIndex, node);
+                    }
+                    success = true;
+                    // TODO: Tại đây có thể lưu lại thứ tự mới vào file cấu hình / database
+                }
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
     }
 
     // ===== NAVIGATION =====
@@ -343,7 +251,7 @@ public class LecturerDashboardController implements Initializable {
             contentArea.getChildren().add(node);
             currentSubPane = node;
         } catch (Exception e) {
-            System.err.println("Loi load pane: " + e.getMessage());
+            System.err.println("Lỗi load pane: " + e.getMessage());
             e.printStackTrace();
             showComing();
         }
@@ -371,7 +279,7 @@ public class LecturerDashboardController implements Initializable {
             stage.setScene(new Scene(loader.load()));
             stage.setTitle(title);
         } catch (Exception e) {
-            System.err.println("Loi navigate: " + e.getMessage());
+            System.err.println("Lỗi navigate: " + e.getMessage());
         }
     }
 }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox styleClass="dashboard-card" prefWidth="320" spacing="12"
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.widgets.StudentRecentAttendanceWidgetController">
+    <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+    <Label text="📋  Điểm danh gần đây" styleClass="card-title"/>
+    <VBox fx:id="boxRecentAttendance" spacing="8"/>
+    <Label fx:id="lblNoAttendance" text="Chưa có dữ liệu"
+           styleClass="empty-label" visible="true" managed="true"/>
+</VBox>

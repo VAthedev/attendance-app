@@ -14,7 +14,8 @@ public class Main extends Application {
         Scene scene = new Scene(loader.load());
         stage.setTitle("Hệ thống TKB & Điểm danh");
         stage.setScene(scene);
-        stage.setResizable(false);
+        stage.setMinWidth(900);
+        stage.setMinHeight(600);
         stage.show();
     }
 
