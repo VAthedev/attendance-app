@@ -23,7 +23,7 @@ jobs:
             git pull origin main || git pull origin master
             
             echo "2. Đang tắt Server cũ..."
-            pkill -f "server.Server" || true
+            pkill -f "[s]erver.Server" || true
             
             echo "3. Đang biên dịch và khởi động lại Server ngầm..."
             nohup mvn clean compile exec:java -Dexec.mainClass="server.Server" > server.log 2>&1 &
