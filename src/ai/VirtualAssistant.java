@@ -34,7 +34,7 @@ public class VirtualAssistant {
         try {
             java.io.File envFile = new java.io.File(".env");
             if (envFile.exists()) {
-                java.util.List<String> lines = java.nio.file.Files.readAllLines(envFile.toPath());
+                java.util.List<String> lines = java.nio.file.Files.readAllLines(envFile.toPath(), java.nio.charset.StandardCharsets.UTF_8);
                 for (String line : lines) {
                     if (line.trim().startsWith("GEMINI_API_KEY=")) {
                         return line.split("=", 2)[1].trim();
@@ -44,7 +44,8 @@ public class VirtualAssistant {
         } catch (Exception e) {
             System.err.println("Lỗi đọc file .env: " + e.getMessage());
         }
-        return null;
+        // Fallback khẩn cấp nếu không đọc được file .env
+        return "<YOUR_GEMINI_API_KEY_HERE>";
     }
 
     private void init() {
