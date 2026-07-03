@@ -5,12 +5,14 @@ import java.time.LocalTime;
 
 public class Session {
 
-    private int id;
-    private int scheduleId;
+    // FIX TC-DATA-002: id phải là String vì MongoDB lưu _id dưới dạng hex string (ví dụ: "686451b3a2...")
+    // Dùng int sẽ gây IllegalArgumentException khi parse ObjectId string thành số nguyên.
+    private String id;
+    private String scheduleId;
     private LocalDate sessionDate;
     private LocalTime startTime;
     private LocalTime endTime;
-    private String status; // ACTIVE, CLOSED, CANCELLED
+    private String status; // OPEN, CLOSED, CANCELLED
     private String attendanceMethod; // GPS, WiFi, QR, MANUAL
     private int totalStudents;
     private int presentCount;
@@ -20,21 +22,21 @@ public class Session {
     public Session() {
     }
 
-    public Session(int scheduleId, LocalDate sessionDate,
+    public Session(String scheduleId, LocalDate sessionDate,
             LocalTime startTime, LocalTime endTime) {
         this.scheduleId = scheduleId;
         this.sessionDate = sessionDate;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.status = "ACTIVE";
+        this.status = "OPEN";
     }
 
     // Getters
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public int getScheduleId() {
+    public String getScheduleId() {
         return scheduleId;
     }
 
@@ -75,11 +77,11 @@ public class Session {
     }
 
     // Setters
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public void setScheduleId(int scheduleId) {
+    public void setScheduleId(String scheduleId) {
         this.scheduleId = scheduleId;
     }
 

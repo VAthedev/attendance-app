@@ -18,7 +18,6 @@ public class NotificationService {
     }
 
     public List<Notification> getNotificationsForStudent(String studentId) {
-        repository.insertMockDataIfEmpty(studentId); // Make sure there's data for demo
         
         List<Document> docs = repository.findByStudentId(studentId);
         List<Notification> notifications = new ArrayList<>();
@@ -55,5 +54,11 @@ public class NotificationService {
 
     public void markAllAsRead(String studentId) {
         repository.markAllAsRead(studentId);
+    }
+
+    public void sendAbsenceWarning(String studentId, String subjectCode, int absentCount) {
+        String title = "Cảnh báo vắng mặt";
+        String message = "Bạn đã vắng mặt " + absentCount + " buổi môn học " + subjectCode + ". Hãy chú ý đi học đầy đủ.";
+        repository.insertNotification(studentId, title, message, "ALERT", LocalDateTime.now());
     }
 }

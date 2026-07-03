@@ -15,6 +15,7 @@ public class Attendance {
     private String location; // GPS coordinates or WiFi SSID
     private String notes;
     private LocalTime createdAt;
+    private long timestamp;
     
     // Additional fields for displaying
     private String subjectName;
@@ -76,6 +77,10 @@ public class Attendance {
         return createdAt;
     }
 
+    public long getTimestamp() {
+        return timestamp;
+    }
+
     public String getSubjectName() {
         return subjectName;
     }
@@ -127,6 +132,10 @@ public class Attendance {
 
     public void setCreatedAt(LocalTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 
     public void setSubjectName(String subjectName) {

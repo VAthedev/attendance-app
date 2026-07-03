@@ -74,6 +74,9 @@ public class ScheduleWeekController implements Initializable {
             String sid = StudentDashboardController.currentStudentId;
             java.util.List<java.util.Map<String,Object>> rows = database.ScheduleRepository.getInstance()
                     .findStudentSchedulesInRange(sid, currentWeekStart, weekEnd);
+            service.AttendanceService attendanceService = new service.AttendanceService();
+            List<model.Attendance> attendances = attendanceService.getAttendanceHistory(sid);
+
             for (java.util.Map<String,Object> r : rows) {
                 String dateStr = (String) r.getOrDefault("date", "");
                 java.time.LocalDate date = null;
@@ -83,14 +86,32 @@ public class ScheduleWeekController implements Initializable {
                 if (day == 7) day = 7; // Sunday remains 7
                 int idx = (day == 7) ? 7 : day; // 1..7
 
+                String subj = (String) r.getOrDefault("subject", "");
+                String status = "PENDING";
+
+                for (model.Attendance att : attendances) {
+                    if (att.getSubjectName() != null && att.getSubjectName().equals(subj)) {
+                        java.time.LocalDate attDate = java.time.Instant.ofEpochMilli(att.getTimestamp()).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+                        if (attDate.equals(date)) {
+                            if ("PRESENT".equals(att.getStatus())) status = "ATTENDED";
+                            else if ("ABSENT".equals(att.getStatus())) status = "MISSED";
+                            else if ("LATE".equals(att.getStatus())) status = "LATE";
+                        }
+                    }
+                }
+
+                if ("PENDING".equals(status) && date.isBefore(LocalDate.now())) {
+                    status = "MISSED";
+                }
+
                 ScheduleInfo si = new ScheduleInfo(
-                        (String) r.getOrDefault("subject", ""),
+                        subj,
                         (String) r.getOrDefault("startTime", ""),
                         (String) r.getOrDefault("endTime", ""),
                         (String) r.getOrDefault("lecturer", ""),
                         (String) r.getOrDefault("room", ""),
                         (String) r.getOrDefault("className", ""),
-                        (String) r.getOrDefault("status", "PENDING")
+                        status
                 );
                 weekSchedules.computeIfAbsent(idx, k -> new ArrayList<>()).add(si);
             }
@@ -224,8 +245,8 @@ public class ScheduleWeekController implements Initializable {
                     VBox info = new VBox(2);
                     Label subject = new Label(schedule.subject);
                     subject.setStyle("-fx-font-weight: bold; -fx-text-fill: #1a2744;");
-                    Label lecturer = new Label("👨‍🏫  " + schedule.lecturer);
-                    lecturer.setStyle("-fx-font-size: 11px; -fx-text-fill: #6b7a99;");
+                    Label lecturer = new Label("👤  " + schedule.lecturer);
+                    lecturer.setStyle("-fx-font-size:10px; -fx-text-fill:#6b7a99;");
                     info.getChildren().addAll(subject, lecturer);
 
                     Label status = new Label(schedule.status.equals("ATTENDED") ? "✅ Đã điểm danh" : 

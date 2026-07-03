@@ -62,7 +62,9 @@
                 <padding>
                     <Insets top="5" bottom="5"/>
                 </padding>
-                <Label text="⚠️ SẮP HẾT THỜI GIAN ĐIỂM DANH ⚠️" styleClass="time-warning-label"/>
+                <HBox fx:id="boxWarning" styleClass="warning-box" alignment="CENTER" visible="false" managed="false">
+                    <Label text="⚠ SẮP HẾT THỜI GIAN ĐIỂM DANH ⚠" styleClass="time-warning-label"/>
+                </HBox>
                 <ProgressBar fx:id="warningProgress" prefWidth="300" prefHeight="3"
                            styleClass="warning-progress" progress="0.0"/>
             </VBox>

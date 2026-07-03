@@ -21,7 +21,7 @@ import protocol.Response;
 
 public class SocketClient {
 
-    private static final String HOST = "localhost";
+    private static final String HOST = "35.198.225.61";
     private static final int PORT = 9999;
 
     private static SocketClient instance;

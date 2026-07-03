@@ -114,11 +114,11 @@
                         <HBox spacing="16">
                             <VBox spacing="6" HBox.hgrow="ALWAYS">
                                 <Label text="Vĩ độ (Latitude)" style="-fx-font-size: 11px;"/>
-                                <TextField fx:id="txtLat" promptText="VD: 10.7769" styleClass="auth-field" maxWidth="Infinity"/>
+                                <TextField fx:id="txtLat" text="10.8700" promptText="VD: 10.7769" styleClass="auth-field" maxWidth="Infinity"/>
                             </VBox>
                             <VBox spacing="6" HBox.hgrow="ALWAYS">
                                 <Label text="Kinh độ (Longitude)" style="-fx-font-size: 11px;"/>
-                                <TextField fx:id="txtLng" promptText="VD: 106.7009" styleClass="auth-field" maxWidth="Infinity"/>
+                                <TextField fx:id="txtLng" text="106.8031" promptText="VD: 106.7009" styleClass="auth-field" maxWidth="Infinity"/>
                             </VBox>
                             <VBox spacing="6">
                                 <Label text="Bán kính (m)" style="-fx-font-size: 11px;"/>
@@ -130,7 +130,7 @@
                     <!-- WiFi Config -->
                     <VBox spacing="6" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="3" fx:id="boxWiFiConfig">
                         <Label text="📶  BSSID WiFi trường" styleClass="field-label"/>
-                        <TextField fx:id="txtBSSID" promptText="VD: AA:BB:CC:DD:EE:FF"
+                        <TextField fx:id="txtBSSID" text="E0:D4:64:89:C8:40" promptText="VD: AA:BB:CC:DD:EE:FF"
                                    styleClass="auth-field" maxWidth="Infinity"/>
                     </VBox>
 
@@ -160,26 +160,26 @@
                             <ColumnConstraints hgrow="ALWAYS"/>
                         </columnConstraints>
 
-                        <Label text="Lớp:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
-                        <Label fx:id="lblPreviewClass" text="--"/>
+                        <Label text="Lớp:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label fx:id="lblPreviewClass" text="--" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
 
-                        <Label text="Môn học:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
-                        <Label fx:id="lblPreviewSubject" text="--"/>
+                        <Label text="Môn học:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Label fx:id="lblPreviewSubject" text="--" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
 
-                        <Label text="Giảng viên:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
-                        <Label fx:id="lblPreviewLecturer" text="--"/>
+                        <Label text="Giảng viên:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <Label fx:id="lblPreviewLecturer" text="--" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
 
-                        <Label text="Thời gian:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
-                        <Label fx:id="lblPreviewDateTime" text="--"/>
+                        <Label text="Thời gian:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                        <Label fx:id="lblPreviewDateTime" text="--" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
 
-                        <Label text="Thời lượng:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
-                        <Label fx:id="lblPreviewDuration" text="--"/>
+                        <Label text="Thời lượng:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                        <Label fx:id="lblPreviewDuration" text="--" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
 
-                        <Label text="Phòm học:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
-                        <Label fx:id="lblPreviewRoom" text="--"/>
+                        <Label text="Phòng học:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                        <Label fx:id="lblPreviewRoom" text="--" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
 
-                        <Label text="Xác minh:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;"/>
-                        <Label fx:id="lblPreviewVerification" text="--"/>
+                        <Label text="Xác minh:" style="-fx-font-weight: bold; -fx-text-fill: #6b7a99;" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+                        <Label fx:id="lblPreviewVerification" text="--" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
                     </GridPane>
 
                     <!-- Active session display -->

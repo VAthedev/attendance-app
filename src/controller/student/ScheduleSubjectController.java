@@ -46,6 +46,9 @@ public class ScheduleSubjectController implements Initializable {
         java.util.List<java.util.Map<String,Object>> allSchedules = database.ScheduleRepository.getInstance()
                 .findStudentSchedulesInRange(sid, today.minusWeeks(2), today.plusWeeks(10));
                 
+        service.AttendanceService attendanceService = new service.AttendanceService();
+        List<model.Attendance> attendances = attendanceService.getAttendanceHistory(sid);
+                
         for (java.util.Map<String,Object> s : allSchedules) {
             String name = (String) s.getOrDefault("subject", "Unnamed");
             if (!subjectsData.containsKey(name)) {
@@ -65,11 +68,23 @@ public class ScheduleSubjectController implements Initializable {
             String room = (String) s.getOrDefault("room", "");
             String status = (String) s.getOrDefault("status", "PENDING");
             
-            // Generate mock past/future status based on date for visual testing
+            // Generate real past/future status based on date
             try {
                 java.time.LocalDate d = java.time.LocalDate.parse(rawDate);
-                if (d.isBefore(today)) status = "ATTENDED";
-                else if (d.isAfter(today)) status = "PENDING";
+                status = "PENDING";
+                for (model.Attendance att : attendances) {
+                    if (att.getSubjectName() != null && att.getSubjectName().equals(name)) {
+                        java.time.LocalDate attDate = java.time.Instant.ofEpochMilli(att.getTimestamp()).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+                        if (attDate.equals(d)) {
+                            if ("PRESENT".equals(att.getStatus())) status = "ATTENDED";
+                            else if ("ABSENT".equals(att.getStatus())) status = "ABSENT";
+                            else if ("LATE".equals(att.getStatus())) status = "LATE";
+                        }
+                    }
+                }
+                if ("PENDING".equals(status) && d.isBefore(today)) {
+                    status = "ABSENT";
+                }
             } catch(Exception ignored) {}
 
             subjectsData.get(name).sessions.add(new SessionInfo(displayDate, time, room, status));
@@ -148,7 +163,7 @@ public class ScheduleSubjectController implements Initializable {
             timeLabel.setStyle("-fx-text-fill: #6b7a99; -fx-font-size: 12px;");
 
             // Room
-            Label roomLabel = new Label("🏫  " + session.room);
+            Label roomLabel = new Label("P. " + session.room);
             roomLabel.setStyle("-fx-text-fill: #6b7a99; -fx-font-size: 12px;");
 
             // Status badge
@@ -162,9 +177,13 @@ public class ScheduleSubjectController implements Initializable {
                     statusLabel.setText("❌ Vắng mặt");
                     statusLabel.setStyle("-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-padding: 4 10; -fx-background-radius: 4; -fx-font-size: 11px;");
                     break;
+                case "LATE":
+                    statusLabel.setText("⏰ Đi muộn");
+                    statusLabel.setStyle("-fx-background-color: #fef3c7; -fx-text-fill: #d97706; -fx-padding: 4 10; -fx-background-radius: 4; -fx-font-size: 11px;");
+                    break;
                 case "PENDING":
                     statusLabel.setText("⏳ Sắp tới");
-                    statusLabel.setStyle("-fx-background-color: #fef3c7; -fx-text-fill: #b45309; -fx-padding: 4 10; -fx-background-radius: 4; -fx-font-size: 11px;");
+                    statusLabel.setStyle("-fx-background-color: #f3f4f6; -fx-text-fill: #4b5563; -fx-padding: 4 10; -fx-background-radius: 4; -fx-font-size: 11px;");
                     break;
             }
 

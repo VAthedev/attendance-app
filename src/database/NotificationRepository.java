@@ -55,27 +55,14 @@ public class NotificationRepository {
             );
     }
 
-    public void insertMockDataIfEmpty(String studentId) {
-        long count = notificationsCollection.countDocuments(Filters.eq("studentId", studentId));
-        if (count == 0) {
-            List<Document> mocks = new ArrayList<>();
-            mocks.add(createDoc(studentId, "Cảnh báo điểm danh", "Bạn đã vắng mặt 2 buổi môn Cấu trúc dữ liệu. Hãy chú ý đi học đầy đủ để không bị cấm thi.", "ALERT", LocalDateTime.now().minusHours(2)));
-            mocks.add(createDoc(studentId, "Thay đổi phòng học", "Môn Lập trình mạng ngày mai sẽ chuyển sang phòng P.305. Vui lòng cập nhật lịch.", "INFO", LocalDateTime.now().minusDays(1)));
-            mocks.add(createDoc(studentId, "Tuyệt vời!", "Bạn đã đạt tỷ lệ chuyên cần 100% trong tháng này. Hãy tiếp tục phát huy nhé!", "SUCCESS", LocalDateTime.now().minusDays(3)));
-            mocks.add(createDoc(studentId, "Lịch thi giữa kỳ", "Lịch thi giữa kỳ các môn đã được cập nhật trên hệ thống đào tạo.", "INFO", LocalDateTime.now().minusDays(5)));
-            mocks.add(createDoc(studentId, "Bảo trì hệ thống", "Hệ thống điểm danh sẽ được bảo trì từ 22:00 đến 24:00 tối nay. Mong bạn thông cảm.", "INFO", LocalDateTime.now().minusDays(10)));
-            
-            notificationsCollection.insertMany(mocks);
-        }
-    }
-
-    private Document createDoc(String studentId, String title, String message, String type, LocalDateTime time) {
-        return new Document("_id", new ObjectId().toHexString())
+    public void insertNotification(String studentId, String title, String message, String type, LocalDateTime time) {
+        Document doc = new Document("_id", new ObjectId().toHexString())
                 .append("studentId", studentId)
                 .append("title", title)
                 .append("message", message)
                 .append("type", type)
                 .append("isRead", false)
                 .append("createdAt", time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+        notificationsCollection.insertOne(doc);
     }
 }

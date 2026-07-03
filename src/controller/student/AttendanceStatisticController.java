@@ -213,7 +213,7 @@ public class AttendanceStatisticController implements Initializable {
                 Platform.runLater(() -> {
                     statisticRecords = records;
                     updateOverview();
-                    updateCharts();
+                    updateCharts(rawRecords);
                     updateTable();
                     updateRecommendation();
                 });
@@ -246,10 +246,10 @@ public class AttendanceStatisticController implements Initializable {
         overallProgress.setProgress(avgAttendance / 100.0);
     }
 
-    private void updateCharts() {
+    private void updateCharts(List<model.Attendance> rawRecords) {
         updateBarChart();
         updatePieChart();
-        updateLineChart();
+        updateLineChart(rawRecords);
     }
 
     private void updateBarChart() {
@@ -280,16 +280,35 @@ public class AttendanceStatisticController implements Initializable {
         pieChart.setData(pieData);
     }
 
-    private void updateLineChart() {
+    private void updateLineChart(List<model.Attendance> rawRecords) {
         XYChart.Series<String, Number> series = new XYChart.Series<>();
         series.setName("Tỷ lệ chuyên cần theo tuần");
 
-        // Mô phỏng dữ liệu theo tuần
-        String[] weeks = { "Tuần 1", "Tuần 2", "Tuần 3", "Tuần 4", "Tuần 5" };
-        double[] attendanceRates = { 85.0, 87.0, 90.0, 88.0, 92.0 };
+        Map<String, int[]> weeklyStats = new TreeMap<>(); // Map "yyyy-Www" -> [total, present]
+        
+        for (model.Attendance att : rawRecords) {
+            long timestamp = att.getTimestamp();
+            if (timestamp > 0) {
+                java.time.LocalDate date = java.time.Instant.ofEpochMilli(timestamp)
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+                int week = date.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                int year = date.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR);
+                String weekKey = year + "-W" + String.format("%02d", week);
+                
+                int[] stats = weeklyStats.getOrDefault(weekKey, new int[]{0, 0});
+                stats[0]++; // total
+                if ("PRESENT".equals(att.getStatus())) {
+                    stats[1]++; // present
+                }
+                weeklyStats.put(weekKey, stats);
+            }
+        }
 
-        for (int i = 0; i < weeks.length; i++) {
-            series.getData().add(new XYChart.Data<>(weeks[i], attendanceRates[i]));
+        for (Map.Entry<String, int[]> entry : weeklyStats.entrySet()) {
+            int total = entry.getValue()[0];
+            int present = entry.getValue()[1];
+            double rate = total > 0 ? (double) present / total * 100 : 0;
+            series.getData().add(new XYChart.Data<>(entry.getKey(), rate));
         }
 
         lineChart.getData().clear();
@@ -311,7 +330,7 @@ public class AttendanceStatisticController implements Initializable {
         StringBuilder recommendation = new StringBuilder();
 
         if (poorRecords > 0) {
-            recommendation.append("⚠️ Bạn có ")
+            recommendation.append("⚠ Bạn có ")
                     .append(poorRecords)
                     .append(" môn có tỷ lệ chuyên cần dưới 60%. ")
                     .append("Hãy cố gắng tham gia đầy đủ các buổi học để cải thiện.");

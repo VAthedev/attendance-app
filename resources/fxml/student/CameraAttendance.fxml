@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.student.CameraAttendanceController"
+      spacing="16" alignment="CENTER"
+      stylesheets="@../../css/main.css"
+      style="-fx-background-color: white;">
+    <padding><Insets top="24" bottom="24" left="24" right="24"/></padding>
+
+    <Label text="Điểm Danh Bằng Khuôn Mặt" styleClass="section-title"/>
+    <Label fx:id="lblStatus" text="Đang khởi động camera..." style="-fx-text-fill: #64748b;"/>
+
+    <StackPane style="-fx-border-color: #e2e8f0; -fx-border-width: 2; -fx-border-radius: 8;">
+        <ImageView fx:id="cameraView" fitWidth="640" fitHeight="480" preserveRatio="true"/>
+    </StackPane>
+
+    <HBox spacing="16" alignment="CENTER">
+        <Button text="Quay lại" styleClass="btn-secondary" onAction="#handleCancel"/>
+        <Button fx:id="btnCapture" text="📷 Chụp và Nhận Diện" styleClass="btn-primary" onAction="#handleCapture"/>
+    </HBox>
+</VBox>

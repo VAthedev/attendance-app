@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox styleClass="dashboard-card" spacing="12" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.widgets.TodayScheduleWidgetController" prefWidth="340">
+    <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+    <HBox alignment="CENTER_LEFT">
+        <Label text="📅  Lịch dạy hôm nay" styleClass="card-title" HBox.hgrow="ALWAYS"/>
+        <!-- Placeholder for drag handle if needed -->
+    </HBox>
+    <VBox fx:id="boxTodaySchedule" spacing="8"/>
+    <Label fx:id="lblNoSchedule" text="Hôm nay không có lịch dạy"
+           styleClass="empty-label" visible="false" managed="false"/>
+</VBox>

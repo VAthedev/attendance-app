@@ -69,6 +69,9 @@ public class ScheduleDayController implements Initializable {
                     .findStudentSchedulesByDate(sid, currentSelectedDate);
 
             java.util.List<ScheduleInfo> schedules = new ArrayList<>();
+            LocalDate today = LocalDate.now();
+            LocalTime now = LocalTime.now();
+
             for (java.util.Map<String,Object> r : rows) {
                 String subject = (String) r.getOrDefault("subject", "");
                 String start = (String) r.getOrDefault("startTime", "");
@@ -79,12 +82,67 @@ public class ScheduleDayController implements Initializable {
                 String status = (String) r.getOrDefault("status", "PENDING");
                 String attendanceTime = (String) r.getOrDefault("attendanceTime", "");
                 int minutesUntilStart = 0;
+
+                // Time-based status calculation
+                if (!"ATTENDED".equals(status) && !start.isEmpty() && !end.isEmpty()) {
+                    try {
+                        LocalTime startTime = LocalTime.parse(start);
+                        LocalTime endTime = LocalTime.parse(end);
+
+                        if (currentSelectedDate.isBefore(today)) {
+                            status = "PAST";
+                        } else if (currentSelectedDate.isAfter(today)) {
+                            status = "UPCOMING";
+                        } else {
+                            // Today
+                            if (now.isAfter(endTime)) {
+                                status = "PAST";
+                            } else {
+                                // Check if lecturer has opened a session
+                                boolean isSessionOpen = false;
+                                java.util.List<org.bson.Document> activeSessions = database.SessionRepository.getInstance().findSessionsByClassCode(className);
+                                long currentMillis = System.currentTimeMillis();
+                                for (org.bson.Document s : activeSessions) {
+                                    if ("OPEN".equals(s.getString("status"))) {
+                                        Long sEndTime = s.getLong("end_time");
+                                        if (sEndTime != null && sEndTime > currentMillis) {
+                                            isSessionOpen = true;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (isSessionOpen) {
+                                    status = "PENDING"; // Can check-in
+                                } else if (now.isBefore(startTime)) {
+                                    status = "UPCOMING";
+                                    minutesUntilStart = (int) java.time.Duration.between(now, startTime).toMinutes();
+                                } else {
+                                    // Class time started, but lecturer hasn't opened session
+                                    status = "UPCOMING";
+                                    minutesUntilStart = 0;
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
                 ScheduleInfo si = new ScheduleInfo(subject, start, end, lecturer, room, className, status, minutesUntilStart);
                 si.attendanceTime = attendanceTime;
                 schedules.add(si);
             }
 
-            // Removed mock data fallback so real DB emptiness is shown
+            // Sort by start time
+            schedules.sort((s1, s2) -> {
+                try {
+                    return LocalTime.parse(s1.startTime).compareTo(LocalTime.parse(s2.startTime));
+                } catch (Exception e) {
+                    return 0;
+                }
+            });
+
             java.util.List<ScheduleInfo> finalSchedules = schedules;
             javafx.application.Platform.runLater(() -> {
                 if (finalSchedules.isEmpty()) {
@@ -99,9 +157,10 @@ public class ScheduleDayController implements Initializable {
 
                 int total = finalSchedules.size();
                 int attended = (int) finalSchedules.stream().filter(s -> s.status.equals("ATTENDED")).count();
+                int upcoming = (int) finalSchedules.stream().filter(s -> s.status.equals("UPCOMING")).count();
                 int pending = (int) finalSchedules.stream().filter(s -> s.status.equals("PENDING")).count();
-                int notAttended = total - attended;
-                updateStats(total, attended, pending, notAttended);
+                
+                updateStats(total, attended, upcoming, pending);
 
                 for (ScheduleInfo schedule : finalSchedules) {
                     VBox scheduleItem = createScheduleItem(schedule);
@@ -139,7 +198,7 @@ public class ScheduleDayController implements Initializable {
         subjectInfo.setStyle("-fx-hgrow: ALWAYS;");
         Label subject = new Label(schedule.subject);
         subject.getStyleClass().add("schedule-subject-large");
-        Label lecturer = new Label("👨‍🏫  " + schedule.lecturer);
+        Label lecturer = new Label("👤  " + schedule.lecturer);
         lecturer.getStyleClass().add("schedule-lecturer");
         subjectInfo.getChildren().addAll(subject, lecturer);
 
@@ -153,7 +212,7 @@ public class ScheduleDayController implements Initializable {
         HBox detailRow = new HBox(24);
         detailRow.setStyle("-fx-padding: 0 0 0 100px;");
 
-        Label room = new Label("🏫  Phòng: " + schedule.room);
+        Label room = new Label("P. " + schedule.room);
         room.getStyleClass().add("schedule-location");
         Label classInfo = new Label("👥  Lớp: " + schedule.className);
         classInfo.getStyleClass().add("schedule-location");
@@ -233,28 +292,37 @@ public class ScheduleDayController implements Initializable {
     }
 
     private void handleCheckIn(ScheduleInfo schedule) {
-        // Show confirmation dialog
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Xác nhận điểm danh");
-        confirm.setHeaderText("Điểm danh cho lớp: " + schedule.subject);
-        confirm.setContentText("Bạn có chắc chắn muốn điểm danh cho buổi học lúc " + 
-                              schedule.startTime + " không?");
-        
-        Optional<ButtonType> result = confirm.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            // TODO: Call attendance service to check in
-            schedule.status = "ATTENDED";
-            schedule.attendanceTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
-            
-            // Show success message
-            Alert success = new Alert(Alert.AlertType.INFORMATION);
-            success.setTitle("Thành công");
-            success.setHeaderText("Điểm danh thành công!");
-            success.setContentText("Điểm danh cho lớp " + schedule.subject + " lúc " + schedule.attendanceTime);
-            success.showAndWait();
-            
-            // Reload data
-            loadScheduleData();
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/student/CameraAttendance.fxml"));
+            javafx.scene.Parent root = loader.load();
+
+            CameraAttendanceController controller = loader.getController();
+            controller.setOnSuccessCallback(() -> {
+                // TODO: Call real attendance service to check in over TLS
+                schedule.status = "ATTENDED";
+                schedule.attendanceTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+                
+                javafx.application.Platform.runLater(() -> {
+                    Alert success = new Alert(Alert.AlertType.INFORMATION);
+                    success.setTitle("Thành công");
+                    success.setHeaderText("Điểm danh khuôn mặt thành công!");
+                    success.setContentText("Đã ghi nhận điểm danh cho lớp " + schedule.subject + " lúc " + schedule.attendanceTime);
+                    success.showAndWait();
+                    
+                    loadScheduleData();
+                });
+            });
+
+            javafx.stage.Stage stage = new javafx.stage.Stage();
+            stage.setTitle("Nhận diện khuôn mặt");
+            stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            stage.setScene(new javafx.scene.Scene(root));
+            stage.showAndWait();
+        } catch (java.io.IOException e) {
+            e.printStackTrace();
+            Alert error = new Alert(Alert.AlertType.ERROR);
+            error.setContentText("Không thể mở cửa sổ Camera: " + e.getMessage());
+            error.showAndWait();
         }
     }
 

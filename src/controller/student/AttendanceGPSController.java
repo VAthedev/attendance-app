@@ -119,16 +119,86 @@ public class AttendanceGPSController implements Initializable {
 
     @FXML
     private void checkSession() {
-        // TODO: Gui GET_ACTIVE_SESSION request qua SocketClient
-        // Demo: gia lap co phien dang mo với thời gian cụ thể
-        LocalDateTime now = LocalDateTime.now();
-        sessionStartTime = now;
-        sessionEndTime = now.plusMinutes(10);
+        new Thread(() -> {
+            String sid = StudentDashboardController.currentStudentId;
+            long nowMillis = System.currentTimeMillis();
 
-        showSession("Lập trình mạng - NT204",
-                "Thứ 3 - 07:30~09:10 - P.201",
-                true, true, sessionStartTime, sessionEndTime);
+            java.util.List<String> enrolledClassCodes = new java.util.ArrayList<>();
+            com.mongodb.client.MongoCollection<org.bson.Document> enrollmentsCol = database.DatabaseHelper.getInstance().getEnrollmentsCollection();
+            for (org.bson.Document doc : enrollmentsCol.find(com.mongodb.client.model.Filters.eq("student_id", sid))) {
+                String cc = doc.getString("class_code");
+                if (cc != null) enrolledClassCodes.add(cc);
+            }
+
+            org.bson.Document activeSession = null;
+            if (!enrolledClassCodes.isEmpty()) {
+                com.mongodb.client.MongoCollection<org.bson.Document> sessionsCol = database.DatabaseHelper.getInstance().getSessionsCollection();
+                for (org.bson.Document s : sessionsCol.find(com.mongodb.client.model.Filters.and(
+                        com.mongodb.client.model.Filters.eq("status", "OPEN"),
+                        com.mongodb.client.model.Filters.in("class_name", enrolledClassCodes)
+                ))) {
+                    Long endTime = s.getLong("end_time");
+                    if (endTime != null && endTime > nowMillis) {
+                        activeSession = s;
+                        break;
+                    }
+                }
+            }
+
+            final org.bson.Document finalSession = activeSession;
+
+            javafx.application.Platform.runLater(() -> {
+                if (finalSession != null) {
+                    currentSessionId = finalSession.getString("_id");
+                    if (currentSessionId == null && finalSession.getObjectId("_id") != null) {
+                        currentSessionId = finalSession.getObjectId("_id").toHexString();
+                    }
+
+                    boolean gpsEnabled = false;
+                    Object gpsObj = finalSession.get("gps_enabled");
+                    if (gpsObj instanceof Boolean) gpsEnabled = (Boolean) gpsObj;
+                    else if (gpsObj instanceof String) gpsEnabled = Boolean.parseBoolean((String) gpsObj);
+
+                    boolean wifiEnabled = false;
+                    Object wifiObj = finalSession.get("wifi_enabled");
+                    if (wifiObj instanceof Boolean) wifiEnabled = (Boolean) wifiObj;
+                    else if (wifiObj instanceof String) wifiEnabled = Boolean.parseBoolean((String) wifiObj);
+                    
+                    try {
+                        String latStr = finalSession.getString("gps_lat");
+                        String lngStr = finalSession.getString("gps_lng");
+                        if (latStr != null && !latStr.isEmpty()) classLat = Double.parseDouble(latStr);
+                        if (lngStr != null && !lngStr.isEmpty()) classLng = Double.parseDouble(lngStr);
+                    } catch (Exception e) {}
+
+                    String bssid = finalSession.getString("wifi_bssid");
+                    if (bssid != null && !bssid.isEmpty()) classBSSID = bssid;
+
+                    long sTime = finalSession.getLong("start_time");
+                    long eTime = finalSession.getLong("end_time");
+                    
+                    sessionStartTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(sTime), java.time.ZoneId.systemDefault());
+                    sessionEndTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(eTime), java.time.ZoneId.systemDefault());
+
+                    String subject = finalSession.getString("subject");
+                    String room = finalSession.getString("room");
+                    if (room == null || room.isEmpty()) room = "N/A";
+                    
+                    String classNameStr = finalSession.getString("class_name");
+                    String info = classNameStr + " - P." + room;
+
+                    showSession(subject, info, gpsEnabled, wifiEnabled, sessionStartTime, sessionEndTime);
+                } else {
+                    boxSessionInfo.setVisible(false);
+                    boxSessionInfo.setManaged(false);
+                    boxNoSession.setVisible(true);
+                    boxNoSession.setManaged(true);
+                }
+            });
+        }).start();
     }
+
+
 
     private void showSession(String subject, String info,
             boolean gps, boolean wifi,
@@ -191,8 +261,11 @@ public class AttendanceGPSController implements Initializable {
 
         // Kiểm tra phiên chưa bắt đầu
         if (now.isBefore(sessionStartTime)) {
-            handleSessionNotStarted();
-            return;
+            // FIX: Nếu Server bị lệch giờ (sessionStartTime ở tương lai) nhưng phiên đang OPEN
+            // Ta tự động đồng bộ lại thời gian bắt đầu về hiện tại để cho phép điểm danh
+            long offset = java.time.temporal.ChronoUnit.SECONDS.between(now, sessionStartTime);
+            sessionStartTime = now;
+            sessionEndTime = sessionEndTime.minusSeconds(offset);
         }
 
         // Tính thời gian còn lại
@@ -271,11 +344,12 @@ public class AttendanceGPSController implements Initializable {
     private void checkAndShowWarnings(long secondsRemaining) {
         if (secondsRemaining <= WARNING_THRESHOLD_SECONDS && !isWarningShown && secondsRemaining > 0) {
             isWarningShown = true;
-            showTimerWarning("⚠️ CÒN " + (secondsRemaining / 60) + " PHÚT ĐỂ ĐIỂM DANH! ⚠️");
+            showTimerWarning("⚠ CÒN " + (secondsRemaining / 60) + " PHÚT ĐỂ ĐIỂM DANH! ⚠");
 
             lblHours.getStyleClass().add("warning");
             lblMinutes.getStyleClass().add("warning");
             lblSeconds.getStyleClass().add("warning");
+
             timerProgress.getStyleClass().add("warning");
         }
 
@@ -461,17 +535,55 @@ public class AttendanceGPSController implements Initializable {
     @FXML
     private void handleCheckin() {
         btnCheckin.setDisable(true);
-        btnCheckin.setText("Đang điểm danh...");
+        btnCheckin.setText("Đang mở camera...");
 
         String method = "";
         if (boxGPS.isVisible() && boxWiFi.isVisible())
-            method = "GPS + WiFi";
+            method = "GPS + WiFi + Face";
         else if (boxGPS.isVisible())
-            method = "GPS";
+            method = "GPS + Face";
         else if (boxWiFi.isVisible())
-            method = "WiFi";
+            method = "WiFi + Face";
+        else
+            method = "Face";
             
         final String finalMethod = method;
+
+        javafx.application.Platform.runLater(() -> {
+            try {
+                javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/fxml/student/CameraAttendance.fxml"));
+                javafx.scene.Parent root = loader.load();
+
+                controller.student.CameraAttendanceController controller = loader.getController();
+                controller.setOnSuccessCallback(() -> {
+                    submitAttendance(finalMethod);
+                });
+
+                javafx.stage.Stage stage = new javafx.stage.Stage();
+                stage.setTitle("Nhận diện khuôn mặt");
+                stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+                stage.setScene(new javafx.scene.Scene(root));
+                
+                stage.showAndWait();
+                
+                // Chạy sau khi cửa sổ camera bị đóng
+                if (!boxSuccess.isVisible() && !btnCheckin.getText().equals("Đang điểm danh...")) {
+                    btnCheckin.setDisable(false);
+                    btnCheckin.setText("Điểm danh ngay");
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
+                showError("Không thể mở cửa sổ Camera: " + e.getMessage());
+                btnCheckin.setDisable(false);
+                btnCheckin.setText("Điểm danh ngay");
+            }
+        });
+    }
+
+    private void submitAttendance(String finalMethod) {
+        javafx.application.Platform.runLater(() -> {
+            btnCheckin.setText("Đang điểm danh...");
+        });
 
         new Thread(() -> {
             try {
@@ -484,7 +596,7 @@ public class AttendanceGPSController implements Initializable {
 
                 javafx.application.Platform.runLater(() -> {
                     if (res.isOk()) {
-                        String time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+                        String time = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
                         lblCheckinTime.setText("Thời gian: " + time + "  •  Phương thức: " + finalMethod);
                         boxSuccess.setVisible(true);
                         boxSuccess.setManaged(true);
@@ -494,10 +606,22 @@ public class AttendanceGPSController implements Initializable {
                         if (countdownTimeline != null) {
                             countdownTimeline.stop();
                         }
+                        
+                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                        alert.setTitle("Thông báo");
+                        alert.setHeaderText(null);
+                        alert.setContentText("Điểm danh thành công!");
+                        alert.showAndWait();
                     } else {
                         btnCheckin.setDisable(false);
                         btnCheckin.setText("Điểm danh ngay");
                         showError(res.getMessage());
+                        
+                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
+                        alert.setTitle("Thông báo");
+                        alert.setHeaderText(null);
+                        alert.setContentText(res.getMessage());
+                        alert.showAndWait();
                     }
                 });
             } catch (Exception e) {
@@ -505,6 +629,12 @@ public class AttendanceGPSController implements Initializable {
                     btnCheckin.setDisable(false);
                     btnCheckin.setText("Điểm danh ngay");
                     showError("Lỗi kết nối server: " + e.getMessage());
+                    
+                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+                    alert.setTitle("Lỗi kết nối");
+                    alert.setHeaderText(null);
+                    alert.setContentText("Lỗi kết nối server: " + e.getMessage());
+                    alert.showAndWait();
                 });
             }
         }).start();

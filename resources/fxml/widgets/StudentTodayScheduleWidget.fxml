@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox styleClass="dashboard-card" HBox.hgrow="ALWAYS" spacing="12" prefWidth="400"
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.widgets.StudentTodayScheduleWidgetController">
+    <padding><Insets top="20" bottom="20" left="20" right="20"/></padding>
+    <HBox alignment="CENTER_LEFT">
+        <Label text="📅  Lịch học hôm nay" styleClass="card-title" HBox.hgrow="ALWAYS"/>
+        <Hyperlink text="Xem tất cả" styleClass="link-text" onAction="#handleShowAll"/>
+    </HBox>
+    <VBox fx:id="boxTodaySchedule" spacing="8"/>
+    <Label fx:id="lblNoSchedule" text="Hôm nay không có lịch học 🎉"
+           styleClass="empty-label" visible="false" managed="false"/>
+</VBox>

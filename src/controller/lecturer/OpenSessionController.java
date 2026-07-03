@@ -49,6 +49,7 @@ public class OpenSessionController implements Initializable {
         initializeClasses();
         setupDateTimeSpinners();
         setupConfigVisibility();
+        setupPreviewListeners();
     }
 
     private String lecturerName;
@@ -90,6 +91,16 @@ public class OpenSessionController implements Initializable {
         spDuration.setValueFactory(durationFactory);
     }
 
+    private void setupPreviewListeners() {
+        tfRoom.textProperty().addListener((obs, oldV, newV) -> updatePreview());
+        dpSessionDate.valueProperty().addListener((obs, oldV, newV) -> updatePreview());
+        spHour.valueProperty().addListener((obs, oldV, newV) -> updatePreview());
+        spMinute.valueProperty().addListener((obs, oldV, newV) -> updatePreview());
+        spDuration.valueProperty().addListener((obs, oldV, newV) -> updatePreview());
+        cbGPS.selectedProperty().addListener((obs, oldV, newV) -> updatePreview());
+        cbWiFi.selectedProperty().addListener((obs, oldV, newV) -> updatePreview());
+    }
+
     private void setupConfigVisibility() {
         cbGPS.selectedProperty().addListener((obs, oldVal, newVal) -> {
             boxGPSConfig.setVisible(newVal);
@@ -100,6 +111,17 @@ public class OpenSessionController implements Initializable {
             boxWiFiConfig.setVisible(newVal);
             boxWiFiConfig.setManaged(newVal);
         });
+
+        // Auto-fill actual BSSID for easier testing
+        new Thread(() -> {
+            service.WiFiVerifyService wifiSvc = new service.WiFiVerifyService();
+            service.WiFiVerifyService.WiFiInfo wifi = wifiSvc.getCurrentWiFi();
+            if (wifi != null && !wifi.getBssid().isEmpty()) {
+                javafx.application.Platform.runLater(() -> {
+                    txtBSSID.setText(wifi.getBssid());
+                });
+            }
+        }).start();
 
         boxGPSConfig.setVisible(true);
         boxWiFiConfig.setVisible(true);
@@ -117,7 +139,7 @@ public class OpenSessionController implements Initializable {
 
         // Parse selected class
         String[] parts = selected.split(" - ");
-        selectedClass = new ClassInfo(parts[0], parts.length > 1 ? parts[1] : "", "TS. Nguyễn Văn A");
+        selectedClass = new ClassInfo(parts[0], parts.length > 1 ? parts[1] : "", this.lecturerName);
         
         lblSelectedSubject.setText(selectedClass.subject);
         lblLecturerName.setText(selectedClass.lecturer);
@@ -188,6 +210,14 @@ public class OpenSessionController implements Initializable {
         req.putPayload("class_name", selectedClass.className);
         req.putPayload("subject", selectedClass.subject);
         req.putPayload("duration", String.valueOf(duration));
+        
+        java.time.LocalDate date = dpSessionDate.getValue();
+        int hour = spHour.getValue();
+        int minute = spMinute.getValue();
+        java.time.LocalDateTime startLdt = java.time.LocalDateTime.of(date, java.time.LocalTime.of(hour, minute));
+        long startMillis = startLdt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        req.putPayload("start_time", String.valueOf(startMillis));
+        
         req.putPayload("room", tfRoom.getText().trim());
         req.putPayload("gps_enabled", String.valueOf(cbGPS.isSelected()));
         req.putPayload("wifi_enabled", String.valueOf(cbWiFi.isSelected()));
