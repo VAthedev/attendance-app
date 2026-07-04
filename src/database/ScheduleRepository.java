@@ -236,6 +236,7 @@ public class ScheduleRepository {
                     m.put("subject", subject);
                     
                     m.put("lecturer", lecturerName);
+                    
                     m.put("room", d.getString("room"));
                     
                     String className = d.getString("className");

@@ -33,6 +33,7 @@ public class LecturerStatisticsController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        barChart.setAnimated(false);
         cbClasses.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 loadStatisticsForClass(newVal);

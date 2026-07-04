@@ -86,6 +86,7 @@ public class AttendanceStatisticController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         attendanceService = new AttendanceService();
+        barChart.setAnimated(false);
 
         setupSemesterComboBox();
         setupTableColumns();
