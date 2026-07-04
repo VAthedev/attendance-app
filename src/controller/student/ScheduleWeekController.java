@@ -32,11 +32,23 @@ public class ScheduleWeekController implements Initializable {
 
     private LocalDate currentWeekStart;
     private ToggleGroup filterGroup;
+    private Map<Integer, List<ScheduleInfo>> currentWeekSchedules = new HashMap<>();
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         currentWeekStart = LocalDate.now().with(ChronoField.DAY_OF_WEEK, 1);
         filterGroup = new ToggleGroup();
+        
+        if (viewModeGroup != null) {
+            viewModeGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal == null) {
+                    viewModeGroup.selectToggle(oldVal);
+                    return;
+                }
+                renderSchedules();
+            });
+        }
+        
         updateWeekDisplay();
     }
 
@@ -111,44 +123,49 @@ public class ScheduleWeekController implements Initializable {
                 }
                 
                 javafx.application.Platform.runLater(() -> {
-                    if (weekSchedules.isEmpty() || weekSchedules.values().stream().allMatch(List::isEmpty)) {
-                        weekGridContainer.setVisible(true);
-                        weekListContainer.setVisible(false);
-                        emptyWeekBox.setVisible(true);
-                        updateStats(0, 0, 0, 0);
-                        return;
-                    }
-
-                    emptyWeekBox.setVisible(false);
-                    
-                    ToggleButton selectedMode = (ToggleButton) viewModeGroup.getSelectedToggle();
-                    String viewMode = selectedMode != null ? (String) selectedMode.getUserData() : "GRID";
-                    
-                    if ("GRID".equals(viewMode)) {
-                        displayGridView(weekSchedules);
-                        weekGridContainer.setVisible(true);
-                        weekListContainer.setVisible(false);
-                    } else {
-                        displayListView(weekSchedules);
-                        weekGridContainer.setVisible(false);
-                        weekListContainer.setVisible(true);
-                    }
-
-                    int total = weekSchedules.values().stream().mapToInt(List::size).sum();
-                    int attended = (int) weekSchedules.values().stream()
-                            .flatMap(List::stream)
-                            .filter(s -> s.status.equals("ATTENDED")).count();
-                    int pending = (int) weekSchedules.values().stream()
-                            .flatMap(List::stream)
-                            .filter(s -> s.status.equals("PENDING")).count();
-                    int missed = total - attended - pending;
-
-                    updateStats(total, attended, pending, missed);
+                    currentWeekSchedules = weekSchedules;
+                    renderSchedules();
                 });
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
         });
+    }
+
+    private void renderSchedules() {
+        if (currentWeekSchedules.isEmpty() || currentWeekSchedules.values().stream().allMatch(List::isEmpty)) {
+            weekGridContainer.setVisible(true);
+            weekListContainer.setVisible(false);
+            emptyWeekBox.setVisible(true);
+            updateStats(0, 0, 0, 0);
+            return;
+        }
+
+        emptyWeekBox.setVisible(false);
+        
+        ToggleButton selectedMode = (ToggleButton) viewModeGroup.getSelectedToggle();
+        String viewMode = selectedMode != null ? (String) selectedMode.getUserData() : "GRID";
+        
+        if ("GRID".equals(viewMode)) {
+            displayGridView(currentWeekSchedules);
+            weekGridContainer.setVisible(true);
+            weekListContainer.setVisible(false);
+        } else {
+            displayListView(currentWeekSchedules);
+            weekGridContainer.setVisible(false);
+            weekListContainer.setVisible(true);
+        }
+
+        int total = currentWeekSchedules.values().stream().mapToInt(List::size).sum();
+        int attended = (int) currentWeekSchedules.values().stream()
+                .flatMap(List::stream)
+                .filter(s -> s.status.equals("ATTENDED")).count();
+        int pending = (int) currentWeekSchedules.values().stream()
+                .flatMap(List::stream)
+                .filter(s -> s.status.equals("PENDING")).count();
+        int missed = total - attended - pending;
+
+        updateStats(total, attended, pending, missed);
     }
 
     private void displayGridView(Map<Integer, List<ScheduleInfo>> weekSchedules) {
@@ -263,7 +280,7 @@ public class ScheduleWeekController implements Initializable {
             case "ATTENDED" -> "-fx-background-color: #dcfce7; -fx-text-fill: #16a34a;";
             case "PENDING" -> "-fx-background-color: #fee2e2; -fx-text-fill: #dc2626;";
             case "UPCOMING" -> "-fx-background-color: #fef3c7; -fx-text-fill: #b45309;";
-            case "PAST" -> "-fx-background-color: #f3f4f6; -fx-text-fill: #6b7280;";
+            case "PAST", "MISSED", "ABSENT", "LATE" -> "-fx-background-color: #f3f4f6; -fx-text-fill: #6b7280;";
             default -> "-fx-background-color: #eff6ff; -fx-text-fill: #2563eb;";
         };
     }
@@ -273,7 +290,7 @@ public class ScheduleWeekController implements Initializable {
             case "ATTENDED" -> "#dcfce7";
             case "PENDING" -> "#fee2e2";
             case "UPCOMING" -> "#fef3c7";
-            case "PAST" -> "#f3f4f6";
+            case "PAST", "MISSED", "ABSENT", "LATE" -> "#f3f4f6";
             default -> "#eff6ff";
         };
     }

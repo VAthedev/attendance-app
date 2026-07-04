@@ -29,13 +29,24 @@ public class ScheduleDayController implements Initializable {
     @FXML private VBox scheduleTimelineBox, emptyScheduleBox;
 
     private LocalDate currentSelectedDate;
-    private ToggleGroup filterGroup;
+    @FXML private ToggleGroup filterGroup;
+    private java.util.List<ScheduleInfo> allSchedulesToday = new ArrayList<>();
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         currentSelectedDate = LocalDate.now();
         dpSelectedDate.setValue(currentSelectedDate);
-        filterGroup = new ToggleGroup();
+        
+        if (filterGroup != null) {
+            filterGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal == null) {
+                    filterGroup.selectToggle(oldVal);
+                    return;
+                }
+                renderSchedules();
+            });
+        }
+        
         loadScheduleData();
     }
 
@@ -141,33 +152,51 @@ public class ScheduleDayController implements Initializable {
 
                 java.util.List<ScheduleInfo> finalSchedules = schedules;
                 javafx.application.Platform.runLater(() -> {
-                    if (finalSchedules.isEmpty()) {
-                        emptyScheduleBox.setVisible(true);
-                        emptyScheduleBox.setManaged(true);
-                        updateStats(0, 0, 0, 0);
-                        return;
-                    }
-
-                    emptyScheduleBox.setVisible(false);
-                    emptyScheduleBox.setManaged(false);
-
-                    int total = finalSchedules.size();
-                    int attended = (int) finalSchedules.stream().filter(s -> s.status.equals("ATTENDED")).count();
-                    int upcoming = (int) finalSchedules.stream().filter(s -> s.status.equals("UPCOMING")).count();
-                    int pending = (int) finalSchedules.stream().filter(s -> s.status.equals("PENDING")).count();
-                    
-                    updateStats(total, attended, upcoming, pending);
-
-                    for (ScheduleInfo schedule : finalSchedules) {
-                        VBox scheduleItem = createScheduleItem(schedule);
-                        scheduleTimelineBox.getChildren().add(scheduleItem);
-                    }
+                    allSchedulesToday = finalSchedules;
+                    renderSchedules();
                 });
 
             } catch (Exception e) {
                 e.printStackTrace();
             }
         });
+    }
+
+    private void renderSchedules() {
+        scheduleTimelineBox.getChildren().clear();
+        
+        if (allSchedulesToday == null || allSchedulesToday.isEmpty()) {
+            emptyScheduleBox.setVisible(true);
+            emptyScheduleBox.setManaged(true);
+            updateStats(0, 0, 0, 0);
+            return;
+        }
+
+        emptyScheduleBox.setVisible(false);
+        emptyScheduleBox.setManaged(false);
+
+        int total = allSchedulesToday.size();
+        int attended = (int) allSchedulesToday.stream().filter(s -> s.status.equals("ATTENDED")).count();
+        int upcoming = (int) allSchedulesToday.stream().filter(s -> s.status.equals("UPCOMING")).count();
+        int pending = (int) allSchedulesToday.stream().filter(s -> s.status.equals("PENDING")).count();
+        
+        updateStats(total, attended, upcoming, pending);
+
+        String filterText = "Tất cả";
+        if (filterGroup != null && filterGroup.getSelectedToggle() != null) {
+            filterText = ((javafx.scene.control.ToggleButton) filterGroup.getSelectedToggle()).getText();
+        }
+
+        for (ScheduleInfo schedule : allSchedulesToday) {
+            boolean show = true;
+            if ("Đã điểm danh".equals(filterText) && !schedule.status.equals("ATTENDED")) show = false;
+            if ("Chưa điểm danh".equals(filterText) && schedule.status.equals("ATTENDED")) show = false;
+            
+            if (show) {
+                VBox scheduleItem = createScheduleItem(schedule);
+                scheduleTimelineBox.getChildren().add(scheduleItem);
+            }
+        }
     }
 
     private VBox createScheduleItem(ScheduleInfo schedule) {
