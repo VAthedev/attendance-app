@@ -117,6 +117,8 @@ public class ScheduleRepository {
                 com.mongodb.client.model.Aggregates.project(com.mongodb.client.model.Projections.fields(
                     com.mongodb.client.model.Projections.excludeId(),
                     com.mongodb.client.model.Projections.computed("subject", "$subject_details.name"),
+                    com.mongodb.client.model.Projections.computed("subject_name", "$schedule_details.subject_name"),
+                    com.mongodb.client.model.Projections.computed("subject_code", "$schedule_details.subject_code"),
                     com.mongodb.client.model.Projections.computed("lecturer", "$schedule_details.lecturer_name"),
                     com.mongodb.client.model.Projections.computed("room", "$schedule_details.room"),
                     com.mongodb.client.model.Projections.computed("className", "$class_code"),
@@ -130,7 +132,10 @@ public class ScheduleRepository {
                 while (cursor.hasNext()) {
                     Document d = cursor.next();
                     Map<String,Object> m = new HashMap<>();
-                    m.put("subject", d.getString("subject"));
+                    String subject = d.getString("subject");
+                    if (subject == null) subject = d.getString("subject_name");
+                    if (subject == null) subject = d.getString("subject_code");
+                    m.put("subject", subject);
                     m.put("lecturer", d.getString("lecturer"));
                     m.put("room", d.getString("room"));
                     m.put("className", d.getString("className"));
@@ -211,6 +216,8 @@ public class ScheduleRepository {
                 com.mongodb.client.model.Aggregates.project(com.mongodb.client.model.Projections.fields(
                     com.mongodb.client.model.Projections.excludeId(),
                     com.mongodb.client.model.Projections.computed("subject", "$subject_details.name"),
+                    com.mongodb.client.model.Projections.computed("subject_name", "$subject_name"),
+                    com.mongodb.client.model.Projections.computed("subject_code", "$subject_code"),
                     com.mongodb.client.model.Projections.computed("room", "$room"),
                     com.mongodb.client.model.Projections.computed("className", "$class_code"),
                     com.mongodb.client.model.Projections.computed("periods", "$periods"),
@@ -223,10 +230,18 @@ public class ScheduleRepository {
                 while (cursor.hasNext()) {
                     Document d = cursor.next();
                     Map<String,Object> m = new HashMap<>();
-                    m.put("subject", d.getString("subject"));
+                    String subject = d.getString("subject");
+                    if (subject == null) subject = d.getString("subject_name");
+                    if (subject == null) subject = d.getString("subject_code");
+                    m.put("subject", subject);
+                    
                     m.put("lecturer", lecturerName);
                     m.put("room", d.getString("room"));
-                    m.put("className", d.getString("className"));
+                    
+                    String className = d.getString("className");
+                    if (className == null) className = d.getString("class");
+                    if (className == null) className = d.getString("class_code");
+                    m.put("className", className);
                     
                     String periods = d.getString("periods");
                     m.put("periods", periods);
@@ -273,12 +288,24 @@ public class ScheduleRepository {
         Map<String,Object> m = new HashMap<>();
         if (d == null) return m;
         // map known fields with fallbacks
-        m.put("subject", d.getString("subject"));
+        String subject = d.getString("subject");
+        if (subject == null) subject = d.getString("subject_name");
+        if (subject == null) subject = d.getString("subject_code");
+        m.put("subject", subject);
+        
         m.put("startTime", d.getString("start_time") != null ? d.getString("start_time") : d.getString("startTime"));
         m.put("endTime", d.getString("end_time") != null ? d.getString("end_time") : d.getString("endTime"));
-        m.put("lecturer", d.getString("lecturer"));
+        
+        String lecturer = d.getString("lecturer");
+        if (lecturer == null) lecturer = d.getString("lecturer_name");
+        m.put("lecturer", lecturer);
+        
         m.put("room", d.getString("room"));
-        m.put("className", d.getString("class") != null ? d.getString("class") : d.getString("className"));
+        
+        String className = d.getString("class");
+        if (className == null) className = d.getString("className");
+        if (className == null) className = d.getString("class_code");
+        m.put("className", className);
         m.put("status", d.getString("status") != null ? d.getString("status") : "PENDING");
         m.put("date", d.getString("date"));
         m.put("attendanceTime", d.getString("attendance_time") != null ? d.getString("attendance_time") : d.getString("attendanceTime"));

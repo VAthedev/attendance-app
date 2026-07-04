@@ -109,6 +109,7 @@ public class LecturerStatisticsController implements Initializable {
                     lblTotalSessions.setText(String.valueOf(totalSessions));
                     lblAvgAttendance.setText(String.format("%.1f%%", finalAvgRate));
 
+                    barChart.setAnimated(false);
                     barChart.getData().clear();
                     barChart.getData().add(series);
 

@@ -263,6 +263,7 @@ public class AttendanceStatisticController implements Initializable {
             series.getData().add(new XYChart.Data<>(record.getSubjectName(), percentage));
         }
 
+        barChart.setAnimated(false);
         barChart.getData().clear();
         barChart.getData().add(series);
     }
