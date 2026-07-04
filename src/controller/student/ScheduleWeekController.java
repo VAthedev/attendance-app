@@ -68,92 +68,87 @@ public class ScheduleWeekController implements Initializable {
             currentWeekStart.format(formatter),
             weekEnd.format(formatter)));
 
-        // Load data for all days in the week (from DB)
-        Map<Integer, List<ScheduleInfo>> weekSchedules = new HashMap<>();
-        try {
-            String sid = StudentDashboardController.currentStudentId;
-            java.util.List<java.util.Map<String,Object>> rows = database.ScheduleRepository.getInstance()
-                    .findStudentSchedulesInRange(sid, currentWeekStart, weekEnd);
-            service.AttendanceService attendanceService = new service.AttendanceService();
-            List<model.Attendance> attendances = attendanceService.getAttendanceHistory(sid);
+        String sid = StudentDashboardController.currentStudentId;
+        protocol.Request req = new protocol.Request(protocol.RequestType.GET_SCHEDULE_BY_WEEK);
+        req.putPayload("studentId", sid);
+        req.putPayload("startDate", currentWeekStart.toString());
+        req.putPayload("endDate", weekEnd.toString());
 
-            for (java.util.Map<String,Object> r : rows) {
-                String dateStr = (String) r.getOrDefault("date", "");
-                java.time.LocalDate date = null;
-                try { date = java.time.LocalDate.parse(dateStr); } catch (Exception ex) { continue; }
-                int day = date.get(java.time.temporal.ChronoField.DAY_OF_WEEK);
-                // Convert to 1..7 with Monday=1 mapping same as existing code
-                if (day == 7) day = 7; // Sunday remains 7
-                int idx = (day == 7) ? 7 : day; // 1..7
-
-                String subj = (String) r.getOrDefault("subject", "");
-                String status = "PENDING";
-
-                for (model.Attendance att : attendances) {
-                    if (att.getSubjectName() != null && att.getSubjectName().equals(subj)) {
-                        java.time.LocalDate attDate = java.time.Instant.ofEpochMilli(att.getTimestamp()).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
-                        if (attDate.equals(date)) {
-                            if ("PRESENT".equals(att.getStatus())) status = "ATTENDED";
-                            else if ("ABSENT".equals(att.getStatus())) status = "MISSED";
-                            else if ("LATE".equals(att.getStatus())) status = "LATE";
-                        }
-                    }
-                }
-
-                if ("PENDING".equals(status) && date.isBefore(LocalDate.now())) {
-                    status = "MISSED";
-                }
-
-                ScheduleInfo si = new ScheduleInfo(
-                        subj,
-                        (String) r.getOrDefault("startTime", ""),
-                        (String) r.getOrDefault("endTime", ""),
-                        (String) r.getOrDefault("lecturer", ""),
-                        (String) r.getOrDefault("room", ""),
-                        (String) r.getOrDefault("className", ""),
-                        status
-                );
-                weekSchedules.computeIfAbsent(idx, k -> new ArrayList<>()).add(si);
+        client.network.SocketClient.getInstance().sendAsync(req, res -> {
+            if (!res.isOk()) {
+                javafx.application.Platform.runLater(() -> System.err.println("Lỗi: " + res.getMessage()));
+                return;
             }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        
-        if (weekSchedules.isEmpty() || weekSchedules.values().stream().allMatch(List::isEmpty)) {
-            weekGridContainer.setVisible(true);
-            weekListContainer.setVisible(false);
-            emptyWeekBox.setVisible(true);
-            updateStats(0, 0, 0, 0);
-            return;
-        }
+            try {
+                Map<Integer, List<ScheduleInfo>> weekSchedules = new HashMap<>();
+                String schedulesStr = res.getDataValue("schedules");
+                org.json.JSONArray arr = new org.json.JSONArray(schedulesStr);
+                
+                for (int i = 0; i < arr.length(); i++) {
+                    org.json.JSONObject r = arr.getJSONObject(i);
+                    String dateStr = r.optString("date", "");
+                    java.time.LocalDate date = null;
+                    try { date = java.time.LocalDate.parse(dateStr); } catch (Exception ex) { continue; }
+                    
+                    int day = date.get(java.time.temporal.ChronoField.DAY_OF_WEEK);
+                    if (day == 7) day = 7; 
+                    int idx = (day == 7) ? 7 : day; 
 
-        emptyWeekBox.setVisible(false);
-        
-        // Determine view mode
-        ToggleButton selectedMode = (ToggleButton) viewModeGroup.getSelectedToggle();
-        String viewMode = selectedMode != null ? (String) selectedMode.getUserData() : "GRID";
-        
-        if ("GRID".equals(viewMode)) {
-            displayGridView(weekSchedules);
-            weekGridContainer.setVisible(true);
-            weekListContainer.setVisible(false);
-        } else {
-            displayListView(weekSchedules);
-            weekGridContainer.setVisible(false);
-            weekListContainer.setVisible(true);
-        }
+                    String subj = r.optString("subject", "");
+                    String status = r.optString("status", "PENDING");
+                    if ("ABSENT".equals(status)) status = "MISSED";
 
-        // Calculate stats
-        int total = weekSchedules.values().stream().mapToInt(List::size).sum();
-        int attended = (int) weekSchedules.values().stream()
-                .flatMap(List::stream)
-                .filter(s -> s.status.equals("ATTENDED")).count();
-        int pending = (int) weekSchedules.values().stream()
-                .flatMap(List::stream)
-                .filter(s -> s.status.equals("PENDING")).count();
-        int missed = total - attended - pending;
+                    ScheduleInfo si = new ScheduleInfo(
+                            subj,
+                            r.optString("startTime", ""),
+                            r.optString("endTime", ""),
+                            r.optString("lecturer", ""),
+                            r.optString("room", ""),
+                            r.optString("className", ""),
+                            status
+                    );
+                    weekSchedules.computeIfAbsent(idx, k -> new ArrayList<>()).add(si);
+                }
+                
+                javafx.application.Platform.runLater(() -> {
+                    if (weekSchedules.isEmpty() || weekSchedules.values().stream().allMatch(List::isEmpty)) {
+                        weekGridContainer.setVisible(true);
+                        weekListContainer.setVisible(false);
+                        emptyWeekBox.setVisible(true);
+                        updateStats(0, 0, 0, 0);
+                        return;
+                    }
 
-        updateStats(total, attended, pending, missed);
+                    emptyWeekBox.setVisible(false);
+                    
+                    ToggleButton selectedMode = (ToggleButton) viewModeGroup.getSelectedToggle();
+                    String viewMode = selectedMode != null ? (String) selectedMode.getUserData() : "GRID";
+                    
+                    if ("GRID".equals(viewMode)) {
+                        displayGridView(weekSchedules);
+                        weekGridContainer.setVisible(true);
+                        weekListContainer.setVisible(false);
+                    } else {
+                        displayListView(weekSchedules);
+                        weekGridContainer.setVisible(false);
+                        weekListContainer.setVisible(true);
+                    }
+
+                    int total = weekSchedules.values().stream().mapToInt(List::size).sum();
+                    int attended = (int) weekSchedules.values().stream()
+                            .flatMap(List::stream)
+                            .filter(s -> s.status.equals("ATTENDED")).count();
+                    int pending = (int) weekSchedules.values().stream()
+                            .flatMap(List::stream)
+                            .filter(s -> s.status.equals("PENDING")).count();
+                    int missed = total - attended - pending;
+
+                    updateStats(total, attended, pending, missed);
+                });
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
     }
 
     private void displayGridView(Map<Integer, List<ScheduleInfo>> weekSchedules) {

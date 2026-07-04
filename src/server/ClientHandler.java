@@ -83,6 +83,11 @@ public class ClientHandler implements Runnable {
                     return handleGetChatHistory(req);
                 case PING:
                     return Response.ok("pong");
+                case GET_SCHEDULE_BY_DAY:
+                    return handleGetScheduleByDay(req);
+                case GET_SCHEDULE_BY_WEEK:
+                case GET_SCHEDULE_BY_SUBJECT:
+                    return handleGetScheduleByRange(req);
                 case SYNC_SCHEDULE:
                     return handleSyncSchedule(req);
                 case OPEN_SESSION:
@@ -365,6 +370,112 @@ public class ClientHandler implements Runnable {
         System.out.println("[ClientHandler] Yêu cầu đồng bộ TKB từ " + userId);
         BroadcastManager.getInstance().broadcastAnnouncement("SCHEDULE_UPDATED");
         return Response.ok("Yêu cầu đồng bộ TKB đã được phát đi.");
+    }
+
+    private Response handleGetScheduleByDay(Request req) {
+        String sid = req.getPayloadValue("studentId");
+        String dateStr = req.getPayloadValue("date");
+        if (sid == null || dateStr == null) return Response.error("Thiếu thông tin studentId hoặc date.");
+
+        try {
+            java.time.LocalDate date = java.time.LocalDate.parse(dateStr);
+            List<Map<String,Object>> rows = database.ScheduleRepository.getInstance().findStudentSchedulesByDate(sid, date);
+            
+            org.json.JSONArray arr = new org.json.JSONArray();
+            for (Map<String,Object> r : rows) {
+                org.json.JSONObject obj = new org.json.JSONObject();
+                obj.put("subject", r.getOrDefault("subject", ""));
+                obj.put("startTime", r.getOrDefault("startTime", ""));
+                obj.put("endTime", r.getOrDefault("endTime", ""));
+                obj.put("lecturer", r.getOrDefault("lecturer", ""));
+                obj.put("room", r.getOrDefault("room", ""));
+                obj.put("className", r.getOrDefault("className", ""));
+                obj.put("status", r.getOrDefault("status", "PENDING"));
+                obj.put("attendanceTime", r.getOrDefault("attendanceTime", ""));
+                
+                String className = (String) r.getOrDefault("className", "");
+                boolean isSessionOpen = false;
+                List<org.bson.Document> activeSessions = database.SessionRepository.getInstance().findSessionsByClassCode(className);
+                long currentMillis = System.currentTimeMillis();
+                for (org.bson.Document s : activeSessions) {
+                    if ("OPEN".equals(s.getString("status"))) {
+                        Long sEndTime = s.getLong("end_time");
+                        if (sEndTime != null && sEndTime > currentMillis) {
+                            isSessionOpen = true;
+                            break;
+                        }
+                    }
+                }
+                obj.put("isSessionOpen", isSessionOpen);
+                arr.put(obj);
+            }
+            
+            Response res = Response.ok("SCHEDULE_DAY");
+            res.putPayload("schedules", arr.toString());
+            return res;
+        } catch (Exception e) {
+            return Response.error("Lỗi lấy TKB: " + e.getMessage());
+        }
+    }
+
+    private Response handleGetScheduleByRange(Request req) {
+        String sid = req.getPayloadValue("studentId");
+        String startStr = req.getPayloadValue("startDate");
+        String endStr = req.getPayloadValue("endDate");
+        if (sid == null || startStr == null || endStr == null) return Response.error("Thiếu thông tin studentId hoặc date.");
+
+        try {
+            java.time.LocalDate startDate = java.time.LocalDate.parse(startStr);
+            java.time.LocalDate endDate = java.time.LocalDate.parse(endStr);
+            List<Map<String,Object>> rows = database.ScheduleRepository.getInstance().findStudentSchedulesInRange(sid, startDate, endDate);
+            
+            service.AttendanceService attendanceService = new service.AttendanceService();
+            List<model.Attendance> attendances = attendanceService.getAttendanceHistory(sid);
+            
+            org.json.JSONArray arr = new org.json.JSONArray();
+            for (Map<String,Object> r : rows) {
+                org.json.JSONObject obj = new org.json.JSONObject();
+                String dateStr = (String) r.getOrDefault("date", "");
+                obj.put("date", dateStr);
+                
+                String subj = (String) r.getOrDefault("subject", "");
+                obj.put("subject", subj);
+                obj.put("startTime", r.getOrDefault("startTime", ""));
+                obj.put("endTime", r.getOrDefault("endTime", ""));
+                obj.put("lecturer", r.getOrDefault("lecturer", ""));
+                obj.put("room", r.getOrDefault("room", ""));
+                obj.put("className", r.getOrDefault("className", ""));
+                
+                java.time.LocalDate date = null;
+                try { date = java.time.LocalDate.parse(dateStr); } catch (Exception ex) {}
+                
+                String status = "PENDING";
+                if (date != null) {
+                    for (model.Attendance att : attendances) {
+                        if (att.getSubjectName() != null && att.getSubjectName().equals(subj)) {
+                            java.time.LocalDate attDate = java.time.Instant.ofEpochMilli(att.getTimestamp()).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+                            if (attDate.equals(date)) {
+                                if ("PRESENT".equals(att.getStatus())) status = "ATTENDED";
+                                else if ("ABSENT".equals(att.getStatus())) status = "ABSENT";
+                                else if ("LATE".equals(att.getStatus())) status = "LATE";
+                            }
+                        }
+                    }
+                    if ("PENDING".equals(status) && date.isBefore(java.time.LocalDate.now())) {
+                        status = "ABSENT";
+                    }
+                }
+                obj.put("status", status);
+                
+                arr.put(obj);
+            }
+            
+            Response res = Response.ok("SCHEDULE_RANGE");
+            res.putPayload("schedules", arr.toString());
+            return res;
+        } catch (Exception e) {
+            return Response.error("Lỗi lấy TKB range: " + e.getMessage());
+        }
     }
 
     private void close() {

@@ -62,112 +62,112 @@ public class ScheduleDayController implements Initializable {
     private void loadScheduleData() {
         scheduleTimelineBox.getChildren().clear();
 
-        // Load from DB in background thread
-        new Thread(() -> {
-            String sid = StudentDashboardController.currentStudentId;
-            java.util.List<java.util.Map<String,Object>> rows = database.ScheduleRepository.getInstance()
-                    .findStudentSchedulesByDate(sid, currentSelectedDate);
+        String sid = StudentDashboardController.currentStudentId;
+        protocol.Request req = new protocol.Request(protocol.RequestType.GET_SCHEDULE_BY_DAY);
+        req.putPayload("studentId", sid);
+        req.putPayload("date", currentSelectedDate.toString());
 
-            java.util.List<ScheduleInfo> schedules = new ArrayList<>();
-            LocalDate today = LocalDate.now();
-            LocalTime now = LocalTime.now();
-
-            for (java.util.Map<String,Object> r : rows) {
-                String subject = (String) r.getOrDefault("subject", "");
-                String start = (String) r.getOrDefault("startTime", "");
-                String end = (String) r.getOrDefault("endTime", "");
-                String lecturer = (String) r.getOrDefault("lecturer", "");
-                String room = (String) r.getOrDefault("room", "");
-                String className = (String) r.getOrDefault("className", "");
-                String status = (String) r.getOrDefault("status", "PENDING");
-                String attendanceTime = (String) r.getOrDefault("attendanceTime", "");
-                int minutesUntilStart = 0;
-
-                // Time-based status calculation
-                if (!"ATTENDED".equals(status) && !start.isEmpty() && !end.isEmpty()) {
-                    try {
-                        LocalTime startTime = LocalTime.parse(start);
-                        LocalTime endTime = LocalTime.parse(end);
-
-                        if (currentSelectedDate.isBefore(today)) {
-                            status = "PAST";
-                        } else if (currentSelectedDate.isAfter(today)) {
-                            status = "UPCOMING";
-                        } else {
-                            // Today
-                            if (now.isAfter(endTime)) {
-                                status = "PAST";
-                            } else {
-                                // Check if lecturer has opened a session
-                                boolean isSessionOpen = false;
-                                java.util.List<org.bson.Document> activeSessions = database.SessionRepository.getInstance().findSessionsByClassCode(className);
-                                long currentMillis = System.currentTimeMillis();
-                                for (org.bson.Document s : activeSessions) {
-                                    if ("OPEN".equals(s.getString("status"))) {
-                                        Long sEndTime = s.getLong("end_time");
-                                        if (sEndTime != null && sEndTime > currentMillis) {
-                                            isSessionOpen = true;
-                                            break;
-                                        }
-                                    }
-                                }
-
-                                if (isSessionOpen) {
-                                    status = "PENDING"; // Can check-in
-                                } else if (now.isBefore(startTime)) {
-                                    status = "UPCOMING";
-                                    minutesUntilStart = (int) java.time.Duration.between(now, startTime).toMinutes();
-                                } else {
-                                    // Class time started, but lecturer hasn't opened session
-                                    status = "UPCOMING";
-                                    minutesUntilStart = 0;
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                ScheduleInfo si = new ScheduleInfo(subject, start, end, lecturer, room, className, status, minutesUntilStart);
-                si.attendanceTime = attendanceTime;
-                schedules.add(si);
+        client.network.SocketClient.getInstance().sendAsync(req, res -> {
+            if (!res.isOk()) {
+                javafx.application.Platform.runLater(() -> {
+                    System.err.println("Lỗi lấy TKB: " + res.getMessage());
+                });
+                return;
             }
 
-            // Sort by start time
-            schedules.sort((s1, s2) -> {
-                try {
-                    return LocalTime.parse(s1.startTime).compareTo(LocalTime.parse(s2.startTime));
-                } catch (Exception e) {
-                    return 0;
+            try {
+                String schedulesStr = res.getDataValue("schedules");
+                org.json.JSONArray arr = new org.json.JSONArray(schedulesStr);
+
+                java.util.List<ScheduleInfo> schedules = new ArrayList<>();
+                LocalDate today = LocalDate.now();
+                LocalTime now = LocalTime.now();
+
+                for (int i = 0; i < arr.length(); i++) {
+                    org.json.JSONObject r = arr.getJSONObject(i);
+                    String subject = r.optString("subject", "");
+                    String start = r.optString("startTime", "");
+                    String end = r.optString("endTime", "");
+                    String lecturer = r.optString("lecturer", "");
+                    String room = r.optString("room", "");
+                    String className = r.optString("className", "");
+                    String status = r.optString("status", "PENDING");
+                    String attendanceTime = r.optString("attendanceTime", "");
+                    boolean isSessionOpen = r.optBoolean("isSessionOpen", false);
+                    int minutesUntilStart = 0;
+
+                    if (!"ATTENDED".equals(status) && !start.isEmpty() && !end.isEmpty()) {
+                        try {
+                            LocalTime startTime = LocalTime.parse(start);
+                            LocalTime endTime = LocalTime.parse(end);
+
+                            if (currentSelectedDate.isBefore(today)) {
+                                status = "PAST";
+                            } else if (currentSelectedDate.isAfter(today)) {
+                                status = "UPCOMING";
+                            } else {
+                                if (now.isAfter(endTime)) {
+                                    status = "PAST";
+                                } else {
+                                    if (isSessionOpen) {
+                                        status = "PENDING";
+                                    } else if (now.isBefore(startTime)) {
+                                        status = "UPCOMING";
+                                        minutesUntilStart = (int) java.time.Duration.between(now, startTime).toMinutes();
+                                    } else {
+                                        status = "UPCOMING";
+                                        minutesUntilStart = 0;
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    ScheduleInfo si = new ScheduleInfo(subject, start, end, lecturer, room, className, status, minutesUntilStart);
+                    si.attendanceTime = attendanceTime;
+                    schedules.add(si);
                 }
-            });
 
-            java.util.List<ScheduleInfo> finalSchedules = schedules;
-            javafx.application.Platform.runLater(() -> {
-                if (finalSchedules.isEmpty()) {
-                    emptyScheduleBox.setVisible(true);
-                    emptyScheduleBox.setManaged(true);
-                    updateStats(0, 0, 0, 0);
-                    return;
-                }
+                // Sort by start time
+                schedules.sort((s1, s2) -> {
+                    try {
+                        return LocalTime.parse(s1.startTime).compareTo(LocalTime.parse(s2.startTime));
+                    } catch (Exception e) {
+                        return 0;
+                    }
+                });
 
-                emptyScheduleBox.setVisible(false);
-                emptyScheduleBox.setManaged(false);
+                java.util.List<ScheduleInfo> finalSchedules = schedules;
+                javafx.application.Platform.runLater(() -> {
+                    if (finalSchedules.isEmpty()) {
+                        emptyScheduleBox.setVisible(true);
+                        emptyScheduleBox.setManaged(true);
+                        updateStats(0, 0, 0, 0);
+                        return;
+                    }
 
-                int total = finalSchedules.size();
-                int attended = (int) finalSchedules.stream().filter(s -> s.status.equals("ATTENDED")).count();
-                int upcoming = (int) finalSchedules.stream().filter(s -> s.status.equals("UPCOMING")).count();
-                int pending = (int) finalSchedules.stream().filter(s -> s.status.equals("PENDING")).count();
-                
-                updateStats(total, attended, upcoming, pending);
+                    emptyScheduleBox.setVisible(false);
+                    emptyScheduleBox.setManaged(false);
 
-                for (ScheduleInfo schedule : finalSchedules) {
-                    VBox scheduleItem = createScheduleItem(schedule);
-                    scheduleTimelineBox.getChildren().add(scheduleItem);
-                }
-            });
-        }).start();
+                    int total = finalSchedules.size();
+                    int attended = (int) finalSchedules.stream().filter(s -> s.status.equals("ATTENDED")).count();
+                    int upcoming = (int) finalSchedules.stream().filter(s -> s.status.equals("UPCOMING")).count();
+                    int pending = (int) finalSchedules.stream().filter(s -> s.status.equals("PENDING")).count();
+                    
+                    updateStats(total, attended, upcoming, pending);
+
+                    for (ScheduleInfo schedule : finalSchedules) {
+                        VBox scheduleItem = createScheduleItem(schedule);
+                        scheduleTimelineBox.getChildren().add(scheduleItem);
+                    }
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private VBox createScheduleItem(ScheduleInfo schedule) {

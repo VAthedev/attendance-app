@@ -39,59 +39,53 @@ public class ScheduleSubjectController implements Initializable {
     }
 
     private void initializeSubjects() {
-        // Try load subjects from DB; fallback to mock
-        // Populate from Aggregation Pipeline
         String sid = StudentDashboardController.currentStudentId;
         java.time.LocalDate today = java.time.LocalDate.now();
-        java.util.List<java.util.Map<String,Object>> allSchedules = database.ScheduleRepository.getInstance()
-                .findStudentSchedulesInRange(sid, today.minusWeeks(2), today.plusWeeks(10));
-                
-        service.AttendanceService attendanceService = new service.AttendanceService();
-        List<model.Attendance> attendances = attendanceService.getAttendanceHistory(sid);
-                
-        for (java.util.Map<String,Object> s : allSchedules) {
-            String name = (String) s.getOrDefault("subject", "Unnamed");
-            if (!subjectsData.containsKey(name)) {
-                String lecturer = (String) s.getOrDefault("lecturer", "Unknown");
-                subjectsData.put(name, new SubjectInfo(name, lecturer, 3, 15, new ArrayList<>()));
-            }
-            
-            // Format date for UI: "dd/MM/yyyy"
-            String rawDate = (String) s.get("date");
-            String displayDate = rawDate;
-            try {
-                java.time.LocalDate d = java.time.LocalDate.parse(rawDate);
-                displayDate = d.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-            } catch(Exception ignored) {}
-            
-            String time = s.get("startTime") + " - " + s.get("endTime");
-            String room = (String) s.getOrDefault("room", "");
-            String status = (String) s.getOrDefault("status", "PENDING");
-            
-            // Generate real past/future status based on date
-            try {
-                java.time.LocalDate d = java.time.LocalDate.parse(rawDate);
-                status = "PENDING";
-                for (model.Attendance att : attendances) {
-                    if (att.getSubjectName() != null && att.getSubjectName().equals(name)) {
-                        java.time.LocalDate attDate = java.time.Instant.ofEpochMilli(att.getTimestamp()).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
-                        if (attDate.equals(d)) {
-                            if ("PRESENT".equals(att.getStatus())) status = "ATTENDED";
-                            else if ("ABSENT".equals(att.getStatus())) status = "ABSENT";
-                            else if ("LATE".equals(att.getStatus())) status = "LATE";
-                        }
-                    }
-                }
-                if ("PENDING".equals(status) && d.isBefore(today)) {
-                    status = "ABSENT";
-                }
-            } catch(Exception ignored) {}
-
-            subjectsData.get(name).sessions.add(new SessionInfo(displayDate, time, room, status));
-        }
         
-        // Populate combo box
-        cbSubjects.getItems().addAll(subjectsData.keySet());
+        protocol.Request req = new protocol.Request(protocol.RequestType.GET_SCHEDULE_BY_SUBJECT);
+        req.putPayload("studentId", sid);
+        req.putPayload("startDate", today.minusWeeks(2).toString());
+        req.putPayload("endDate", today.plusWeeks(10).toString());
+
+        client.network.SocketClient.getInstance().sendAsync(req, res -> {
+            if (!res.isOk()) {
+                javafx.application.Platform.runLater(() -> System.err.println("Lỗi: " + res.getMessage()));
+                return;
+            }
+            try {
+                String schedulesStr = res.getDataValue("schedules");
+                org.json.JSONArray arr = new org.json.JSONArray(schedulesStr);
+                
+                for (int i = 0; i < arr.length(); i++) {
+                    org.json.JSONObject r = arr.getJSONObject(i);
+                    String name = r.optString("subject", "Unnamed");
+                    
+                    if (!subjectsData.containsKey(name)) {
+                        String lecturer = r.optString("lecturer", "Unknown");
+                        subjectsData.put(name, new SubjectInfo(name, lecturer, 3, 15, new ArrayList<>()));
+                    }
+                    
+                    String rawDate = r.optString("date", "");
+                    String displayDate = rawDate;
+                    try {
+                        java.time.LocalDate d = java.time.LocalDate.parse(rawDate);
+                        displayDate = d.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                    } catch(Exception ignored) {}
+                    
+                    String time = r.optString("startTime") + " - " + r.optString("endTime");
+                    String room = r.optString("room", "");
+                    String status = r.optString("status", "PENDING");
+                    
+                    subjectsData.get(name).sessions.add(new SessionInfo(displayDate, time, room, status));
+                }
+                
+                javafx.application.Platform.runLater(() -> {
+                    cbSubjects.getItems().addAll(subjectsData.keySet());
+                });
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
     }
 
     @FXML

@@ -68,21 +68,28 @@ public class Response {
 
     public static Response fromJson(String json) {
         try {
-            String nonce     = extractString(json, "nonce");
-            String status    = extractString(json, "status");
-            String message   = extractString(json, "message");
-            long   timestamp = extractLong(json, "timestamp");
-
-            Map<String, Object> data = new HashMap<>();
-            int dataStart = json.indexOf("\"data\":{") + 8;
-            int dataEnd   = json.lastIndexOf("}");
-            if (dataStart > 7 && dataEnd > dataStart) {
-                String dataStr = json.substring(dataStart, dataEnd);
-                data = parseSimpleObject(dataStr);
+            org.json.JSONObject obj = new org.json.JSONObject(json);
+            String nonce = obj.optString("nonce", null);
+            String status = obj.optString("status", "");
+            String message = obj.optString("message", "");
+            long timestamp = obj.optLong("timestamp", 0);
+            
+            Map<String, Object> dataMap = new HashMap<>();
+            org.json.JSONObject dataObj = obj.optJSONObject("data");
+            if (dataObj != null) {
+                for (String key : dataObj.keySet()) {
+                    Object val = dataObj.get(key);
+                    // If it's a JSONArray or JSONObject, we can convert it to string so that client code expecting strings works
+                    if (val instanceof org.json.JSONArray || val instanceof org.json.JSONObject) {
+                        dataMap.put(key, val.toString());
+                    } else {
+                        dataMap.put(key, val.toString());
+                    }
+                }
             }
-
-            Response res   = new Response(status, message, data);
-            res.timestamp  = timestamp;
+            
+            Response res = new Response(status, message, dataMap);
+            res.timestamp = timestamp;
             if (nonce != null && !nonce.isEmpty()) res.setNonce(nonce);
             return res;
         } catch (Exception e) {
@@ -111,42 +118,6 @@ public class Response {
     private static String escapeJson(String s) {
         return s.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "\\r");
-    }
-
-    private static String extractString(String json, String key) {
-        String search = "\"" + key + "\":\"";
-        int start = json.indexOf(search);
-        if (start < 0) return "";
-        start += search.length();
-        int end = json.indexOf("\"", start);
-        return end > start ? json.substring(start, end) : "";
-    }
-
-    private static long extractLong(String json, String key) {
-        String search = "\"" + key + "\":";
-        int start = json.indexOf(search);
-        if (start < 0) return 0;
-        start += search.length();
-        int end = start;
-        while (end < json.length() && Character.isDigit(json.charAt(end))) end++;
-        try { return Long.parseLong(json.substring(start, end)); }
-        catch (Exception e) { return 0; }
-    }
-
-    private static Map<String, Object> parseSimpleObject(String json) {
-        Map<String, Object> map = new HashMap<>();
-        json = json.trim();
-        if (json.isEmpty() || json.equals("{}")) return map;
-        String[] pairs = json.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-        for (String pair : pairs) {
-            String[] kv = pair.split(":(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", 2);
-            if (kv.length == 2) {
-                String key = kv[0].trim().replace("\"", "");
-                String val = kv[1].trim().replace("\"", "");
-                map.put(key, val);
-            }
-        }
-        return map;
     }
 
     @Override
