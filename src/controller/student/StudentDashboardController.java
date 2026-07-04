@@ -88,18 +88,28 @@ public class StudentDashboardController implements Initializable {
                         alert.show();
                         showDashboard(); 
                     });
-                } else if (message != null && message.equals("SESSION_OPENED")) {
+                } else if (message != null && message.startsWith("SESSION_OPENED:")) {
                     javafx.application.Platform.runLater(() -> {
-                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-                        alert.setTitle("Thông báo Điểm danh");
-                        alert.setHeaderText("Phiên điểm danh mới");
-                        alert.setContentText("Giảng viên vừa mở một phiên điểm danh mới! Vui lòng tải lại trang.");
-                        alert.show();
                         if (lblPageTitle.getText().equals("Điểm danh")) {
                             showAttendance(); 
                         }
                     });
                 }
+            } else if ("NOTIFICATION".equals(res.getMessage())) {
+                String title = res.getDataValue("title");
+                String content = res.getDataValue("message");
+                javafx.application.Platform.runLater(() -> {
+                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                    alert.setTitle("Thông báo mới");
+                    alert.setHeaderText(title);
+                    alert.setContentText(content);
+                    alert.show();
+                    if (lblPageTitle.getText().equals("Thông báo")) {
+                        showNotification();
+                    } else if (lblPageTitle.getText().equals("Tổng quan")) {
+                        loadDashboardData(studentId); // refresh notification widget
+                    }
+                });
             }
         });
 

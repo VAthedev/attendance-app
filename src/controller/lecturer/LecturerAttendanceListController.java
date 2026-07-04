@@ -57,11 +57,28 @@ public class LecturerAttendanceListController {
                 for (Document doc : sessions) {
                     SessionData data = new SessionData();
                     data.id = doc.get("_id").toString();
-                    data.className = doc.getString("class_code");
-                    data.subject = doc.getString("subject_code");
-                    data.date = doc.getString("date");
-                    data.startTime = doc.getString("start_time");
-                    data.endTime = doc.getString("end_time");
+                    data.className = doc.getString("class_name") != null ? doc.getString("class_name") : doc.getString("class_code");
+                    data.subject = doc.getString("subject") != null ? doc.getString("subject") : doc.getString("subject_code");
+                    
+                    Object startObj = doc.get("start_time");
+                    if (startObj instanceof Number) {
+                        long startMillis = ((Number) startObj).longValue();
+                        java.time.LocalDateTime startLdt = java.time.Instant.ofEpochMilli(startMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+                        data.date = startLdt.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                        data.startTime = startLdt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+                    } else {
+                        data.date = doc.getString("date") != null ? doc.getString("date") : "N/A";
+                        data.startTime = startObj != null ? startObj.toString() : "N/A";
+                    }
+
+                    Object endObj = doc.get("end_time");
+                    if (endObj instanceof Number) {
+                        long endMillis = ((Number) endObj).longValue();
+                        java.time.LocalDateTime endLdt = java.time.Instant.ofEpochMilli(endMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+                        data.endTime = endLdt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+                    } else {
+                        data.endTime = endObj != null ? endObj.toString() : "N/A";
+                    }
                     data.status = doc.getString("status");
 
                     data.presentCount = attRepo.countBySessionId(data.id);

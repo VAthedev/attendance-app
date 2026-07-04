@@ -338,8 +338,32 @@ public class ClientHandler implements Runnable {
             
             // Lên lịch tự động đóng phiên
             SessionCountdownService.getInstance().scheduleSessionClose(sessionId, duration);
-            BroadcastManager.getInstance().broadcastAnnouncement("SESSION_OPENED");
             
+            String className = req.getPayloadValue("class_name");
+            String subject = req.getPayloadValue("subject");
+            java.util.List<org.bson.Document> enrolledStudents = database.EnrollmentRepository.getInstance().findStudentsByClassCode(className);
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            
+            for (org.bson.Document studentDoc : enrolledStudents) {
+                String studentId = studentDoc.getString("student_id");
+                if (studentId != null) {
+                    database.NotificationRepository.getInstance().insertNotification(
+                        studentId,
+                        "Phiên điểm danh mới",
+                        "Giảng viên vừa mở điểm danh cho lớp " + className + " - " + subject + ".",
+                        "SYSTEM",
+                        now
+                    );
+                    BroadcastManager.getInstance().sendNotificationToUser(
+                        studentId,
+                        "Phiên điểm danh mới",
+                        "Giảng viên vừa mở điểm danh cho lớp " + className + " - " + subject + "."
+                    );
+                }
+            }
+            
+            // Phục vụ cho UI sinh viên auto-reload tab Điểm danh nếu đúng lớp
+            BroadcastManager.getInstance().broadcastAnnouncement("SESSION_OPENED:" + className);
             Response res = Response.ok("Mở phiên điểm danh thành công.");
             res.putPayload("session_id", sessionId);
             return res;
