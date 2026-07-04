@@ -190,7 +190,7 @@ public class AttendanceService {
         for (Attendance record : records) {
             if ("PRESENT".equals(record.getStatus())) {
                 totalPresent++;
-            } else if ("ABSENT".equals(record.getStatus())) {
+            } else if ("ABSENT".equals(record.getStatus()) || "UNEXCUSED_ABSENT".equals(record.getStatus())) {
                 totalAbsent++;
             } else if ("LATE".equals(record.getStatus())) {
                 totalLate++;
@@ -248,15 +248,17 @@ public class AttendanceService {
     public double getAverageAttendanceRate(String studentId) {
         List<Attendance> records = getAttendanceHistory(studentId);
 
-        if (records.isEmpty()) {
-            return 0;
-        }
+        long validRecords = records.stream()
+                .filter(r -> !"EXCUSED_ABSENT".equals(r.getStatus()))
+                .count();
+                
+        if (validRecords == 0) return 0;
 
         long presentCount = records.stream()
                 .filter(r -> "PRESENT".equals(r.getStatus()))
                 .count();
 
-        return (double) presentCount / records.size() * 100;
+        return (double) presentCount / validRecords * 100;
     }
 
     /**

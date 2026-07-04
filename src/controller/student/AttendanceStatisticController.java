@@ -176,13 +176,17 @@ public class AttendanceStatisticController implements Initializable {
                 // Group by Subject
                 Map<String, int[]> statsMap = new HashMap<>(); // [total, present, absent, late]
                 for (model.Attendance att : rawRecords) {
+                    String st = att.getStatus();
+                    if ("EXCUSED_ABSENT".equals(st)) {
+                        continue;
+                    }
+
                     String subj = att.getSubjectName() != null ? att.getSubjectName() : "Unknown";
                     int[] counts = statsMap.getOrDefault(subj, new int[]{0, 0, 0, 0});
                     counts[0]++; // total
                     
-                    String st = att.getStatus();
                     if ("PRESENT".equals(st)) counts[1]++;
-                    else if ("ABSENT".equals(st)) counts[2]++;
+                    else if ("ABSENT".equals(st) || "UNEXCUSED_ABSENT".equals(st)) counts[2]++;
                     else if ("LATE".equals(st)) counts[3]++;
                     
                     statsMap.put(subj, counts);
@@ -297,6 +301,9 @@ public class AttendanceStatisticController implements Initializable {
                 int year = date.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR);
                 String weekKey = year + "-W" + String.format("%02d", week);
                 
+                if ("EXCUSED_ABSENT".equals(att.getStatus())) {
+                    continue;
+                }
                 int[] stats = weeklyStats.getOrDefault(weekKey, new int[]{0, 0});
                 stats[0]++; // total
                 if ("PRESENT".equals(att.getStatus())) {
