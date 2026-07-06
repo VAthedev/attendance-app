@@ -19,28 +19,28 @@
             <!-- Title & Actions -->
             <HBox alignment="CENTER_LEFT">
                 <VBox spacing="4" HBox.hgrow="ALWAYS">
-                    <Label text="ðŸ“…  Quáº£n lÃ½ Lá»‹ch dáº¡y" styleClass="section-title"/>
-                    <Label text="Xem vÃ  Ä‘iá»u phá»‘i lá»‹ch giáº£ng dáº¡y trong tuáº§n" styleClass="section-subtitle"/>
+                    <Label text="📅  Quản lý Lịch dạy" styleClass="section-title"/>
+                    <Label text="Xem và điều phối lịch giảng dạy trong tuần" styleClass="section-subtitle"/>
                 </VBox>
                 <HBox spacing="12">
-                    <Button text="ðŸ”„ Äá»“ng bá»™ TKB" styleClass="btn-secondary" onAction="#handleSync"/>
-                    <Button text="â–¶ Má»Ÿ Ä‘iá»ƒm danh nhanh" styleClass="btn-primary" onAction="#handleQuickOpenSession"/>
+                    <Button text="🔄 Đồng bộ TKB" styleClass="btn-secondary" onAction="#handleSync"/>
+                    <Button text="▶ Mở điểm danh nhanh" styleClass="btn-primary" onAction="#handleQuickOpenSession"/>
                 </HBox>
             </HBox>
 
             <!-- Week navigation -->
             <HBox spacing="16" alignment="CENTER_LEFT">
                 <VBox spacing="6">
-                    <Label text="Chá»n tuáº§n" styleClass="field-label"/>
+                    <Label text="Chọn tuần" styleClass="field-label"/>
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Button text="â† Tuáº§n trÆ°á»›c" styleClass="btn-secondary"
+                        <Button text="← Tuần trước" styleClass="btn-secondary"
                                onAction="#handlePreviousWeek" prefWidth="110"/>
-                        <Label fx:id="lblWeekRange" text="Tuáº§n 1 (03/01 - 09/01)"
+                        <Label fx:id="lblWeekRange" text="Tuần 1 (03/01 - 09/01)"
                               style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #1a2744; -fx-min-width: 150; alignment: center;"/>
-                        <Button text="Tuáº§n sau â†’" styleClass="btn-secondary"
+                        <Button text="Tuần sau →" styleClass="btn-secondary"
                                onAction="#handleNextWeek" prefWidth="110"/>
                         <Separator orientation="VERTICAL" style="-fx-padding: 0 4;"/>
-                        <Button text="Tuáº§n nÃ y" styleClass="btn-secondary"
+                        <Button text="Tuần này" styleClass="btn-secondary"
                                onAction="#handleCurrentWeek" prefWidth="90"/>
                     </HBox>
                 </VBox>
@@ -49,12 +49,12 @@
 
                 <!-- View mode selector -->
                 <VBox spacing="6">
-                    <Label text="Cháº¿ Ä‘á»™ xem" styleClass="field-label"/>
+                    <Label text="Chế độ xem" styleClass="field-label"/>
                     <HBox spacing="8">
-                        <ToggleButton fx:id="btnViewGrid" text="ðŸ“Š LÆ°á»›i" styleClass="view-mode-toggle"
+                        <ToggleButton fx:id="btnViewGrid" text="📊 Lưới" styleClass="view-mode-toggle"
                                      selected="true" toggleGroup="$viewModeGroup"
                                      userData="GRID"/>
-                        <ToggleButton fx:id="btnViewList" text="ðŸ“‹ Danh sÃ¡ch" styleClass="view-mode-toggle"
+                        <ToggleButton fx:id="btnViewList" text="📋 Danh sách" styleClass="view-mode-toggle"
                                      toggleGroup="$viewModeGroup"
                                      userData="LIST"/>
                         <fx:define>
@@ -75,29 +75,29 @@
             <HBox spacing="12">
                 <VBox styleClass="stat-card,stat-card-blue" HBox.hgrow="ALWAYS" spacing="6">
                     <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
-                    <Label text="ðŸ“š" styleClass="stat-card-icon"/>
+                    <Label text="📚" styleClass="stat-card-icon"/>
                     <Label fx:id="lblTotalClassWeek" text="0" styleClass="stat-card-number"/>
-                    <Label text="Tá»•ng sá»‘ ca dáº¡y" styleClass="stat-card-label"/>
+                    <Label text="Tổng số ca dạy" styleClass="stat-card-label"/>
                 </VBox>
 
                 <VBox styleClass="stat-card,stat-card-green" HBox.hgrow="ALWAYS" spacing="6">
                     <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
-                    <Label text="âœ…" styleClass="stat-card-icon"/>
+                    <Label text="✅" styleClass="stat-card-icon"/>
                     <Label fx:id="lblDoneWeek" text="0" styleClass="stat-card-number"/>
-                    <Label text="Ca Ä‘Ã£ qua" styleClass="stat-card-label"/>
+                    <Label text="Ca đã qua" styleClass="stat-card-label"/>
                 </VBox>
 
                 <VBox styleClass="stat-card,stat-card-amber" HBox.hgrow="ALWAYS" spacing="6">
                     <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
-                    <Label text="â°" styleClass="stat-card-icon"/>
+                    <Label text="⏰" styleClass="stat-card-icon"/>
                     <Label fx:id="lblPendingWeek" text="0" styleClass="stat-card-number"/>
-                    <Label text="Ca sáº¯p tá»›i" styleClass="stat-card-label"/>
+                    <Label text="Ca sắp tới" styleClass="stat-card-label"/>
                 </VBox>
             </HBox>
 
             <!-- ===== WEEK GRID VIEW ===== -->
             <VBox fx:id="weekGridContainer" styleClass="week-grid-container" spacing="0">
-                <Label text="ðŸ“…  Lá»‹ch dáº¡y theo tuáº§n" styleClass="card-title"/>
+                <Label text="📅  Lịch dạy theo tuần" styleClass="card-title"/>
                 <Region prefHeight="12"/>
 
                 <!-- Days columns -->
@@ -109,33 +109,33 @@
                 <VBox fx:id="emptyWeekBox" alignment="CENTER" spacing="12"
                      visible="false" managed="false">
                     <padding><Insets top="60" bottom="60"/></padding>
-                    <Label text="ðŸ“­" style="-fx-font-size: 48px;"/>
-                    <Label text="Tuáº§n nÃ y khÃ´ng cÃ³ ca dáº¡y"
+                    <Label text="📭" style="-fx-font-size: 48px;"/>
+                    <Label text="Tuần này không có ca dạy"
                           styleClass="empty-label" style="-fx-font-size: 16px;"/>
                 </VBox>
             </VBox>
 
             <!-- ===== LIST VIEW (Hidden by default) ===== -->
             <VBox fx:id="weekListContainer" spacing="12" visible="false" managed="false">
-                <Label text="ðŸ“‹  Danh sÃ¡ch ca dáº¡y" styleClass="card-title"/>
+                <Label text="📋  Danh sách ca dạy" styleClass="card-title"/>
                 <VBox fx:id="weekListBox" spacing="8"/>
             </VBox>
 
             <!-- ===== LEGEND ===== -->
             <VBox spacing="8" style="-fx-background-color: #f8fafc; -fx-background-radius: 8; -fx-padding: 16;">
-                <Label text="ChÃº thÃ­ch" styleClass="field-label"/>
+                <Label text="Chú thích" styleClass="field-label"/>
                 <HBox spacing="24">
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <Rectangle width="20" height="20" style="-fx-fill: #dcfce7; -fx-arc-width: 4; -fx-arc-height: 4;"/>
-                        <Label text="ÄÃ£ qua" styleClass="legend-text"/>
+                        <Label text="Đã qua" styleClass="legend-text"/>
                     </HBox>
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <Rectangle width="20" height="20" style="-fx-fill: #eff6ff; -fx-arc-width: 4; -fx-arc-height: 4;"/>
-                        <Label text="HÃ´m nay (Äang diá»…n ra)" styleClass="legend-text"/>
+                        <Label text="Hôm nay (Đang diễn ra)" styleClass="legend-text"/>
                     </HBox>
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <Rectangle width="20" height="20" style="-fx-fill: #fef3c7; -fx-arc-width: 4; -fx-arc-height: 4;"/>
-                        <Label text="Sáº¯p tá»›i" styleClass="legend-text"/>
+                        <Label text="Sắp tới" styleClass="legend-text"/>
                     </HBox>
                 </HBox>
             </VBox>

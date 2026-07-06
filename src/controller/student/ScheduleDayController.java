@@ -98,7 +98,7 @@ public class ScheduleDayController implements Initializable {
         client.network.SocketClient.getInstance().sendAsync(req, res -> {
             if (!res.isOk()) {
                 javafx.application.Platform.runLater(() -> {
-                    System.err.println("Lá»—i láº¥y TKB: " + res.getMessage());
+                    System.err.println("Lỗi lấy TKB: " + res.getMessage());
                 });
                 return;
             }
@@ -245,7 +245,7 @@ public class ScheduleDayController implements Initializable {
         subjectInfo.setStyle("-fx-hgrow: ALWAYS;");
         Label subject = new Label(schedule.subject);
         subject.getStyleClass().add("schedule-subject-large");
-        Label lecturer = new Label("ðŸ‘¤  " + schedule.lecturer);
+        Label lecturer = new Label("👤  " + schedule.lecturer);
         lecturer.getStyleClass().add("schedule-lecturer");
         subjectInfo.getChildren().addAll(subject, lecturer);
 
@@ -261,7 +261,7 @@ public class ScheduleDayController implements Initializable {
 
         Label room = new Label("P. " + schedule.room);
         room.getStyleClass().add("schedule-location");
-        Label classInfo = new Label("ðŸ‘¥  Lá»›p: " + schedule.className);
+        Label classInfo = new Label("👥  Lớp: " + schedule.className);
         classInfo.getStyleClass().add("schedule-location");
 
         detailRow.getChildren().addAll(room, classInfo);
@@ -271,20 +271,20 @@ public class ScheduleDayController implements Initializable {
         footer.setStyle("-fx-padding: 12 0 0 100px; -fx-alignment: CENTER_LEFT;");
 
         if (schedule.status.equals("PENDING")) {
-            Button checkInBtn = new Button("âœ“  Äiá»ƒm danh ngay");
+            Button checkInBtn = new Button("✓  Điểm danh ngay");
             checkInBtn.getStyleClass().add("btn-attendance");
             checkInBtn.setOnAction(e -> handleCheckIn(schedule));
 
-            Button checkDetailsBtn = new Button("Chi tiáº¿t");
+            Button checkDetailsBtn = new Button("Chi tiết");
             checkDetailsBtn.getStyleClass().add("btn-secondary");
 
             footer.getChildren().addAll(checkInBtn, checkDetailsBtn);
         } else if (schedule.status.equals("UPCOMING")) {
-            Label upcomingLabel = new Label("â³ Sáº¯p báº¯t Ä‘áº§u trong " + schedule.minutesUntilStart + " phÃºt");
+            Label upcomingLabel = new Label("⏳ Sắp bắt đầu trong " + schedule.minutesUntilStart + " phút");
             upcomingLabel.setStyle("-fx-text-fill: #f59e0b; -fx-font-size: 12px;");
             footer.getChildren().add(upcomingLabel);
         } else if (schedule.status.equals("ATTENDED")) {
-            Label attendedLabel = new Label("âœ“ ÄÃ£ Ä‘iá»ƒm danh lÃºc " + schedule.attendanceTime);
+            Label attendedLabel = new Label("✓ Đã điểm danh lúc " + schedule.attendanceTime);
             attendedLabel.setStyle("-fx-text-fill: #22c55e; -fx-font-size: 12px;");
             footer.getChildren().add(attendedLabel);
         }
@@ -302,19 +302,19 @@ public class ScheduleDayController implements Initializable {
         Label badge = new Label();
         switch (status) {
             case "ATTENDED":
-                badge.setText("âœ… ÄÃ£ Ä‘iá»ƒm danh");
+                badge.setText("✅ Đã điểm danh");
                 badge.getStyleClass().add("status-attended");
                 break;
             case "PENDING":
-                badge.setText("â­• ChÆ°a Ä‘iá»ƒm danh");
+                badge.setText("⭕ Chưa điểm danh");
                 badge.getStyleClass().add("status-pending");
                 break;
             case "UPCOMING":
-                badge.setText("â° Sáº¯p tá»›i");
+                badge.setText("⏰ Sắp tới");
                 badge.getStyleClass().add("status-upcoming");
                 break;
             case "PAST":
-                badge.setText("âŒ ÄÃ£ káº¿t thÃºc");
+                badge.setText("❌ Đã kết thúc");
                 badge.getStyleClass().add("status-past");
                 break;
         }
@@ -351,9 +351,9 @@ public class ScheduleDayController implements Initializable {
                 
                 javafx.application.Platform.runLater(() -> {
                     Alert success = new Alert(Alert.AlertType.INFORMATION);
-                    success.setTitle("ThÃ nh cÃ´ng");
-                    success.setHeaderText("Äiá»ƒm danh khuÃ´n máº·t thÃ nh cÃ´ng!");
-                    success.setContentText("ÄÃ£ ghi nháº­n Ä‘iá»ƒm danh cho lá»›p " + schedule.subject + " lÃºc " + schedule.attendanceTime);
+                    success.setTitle("Thành công");
+                    success.setHeaderText("Điểm danh khuôn mặt thành công!");
+                    success.setContentText("Đã ghi nhận điểm danh cho lớp " + schedule.subject + " lúc " + schedule.attendanceTime);
                     success.showAndWait();
                     
                     loadScheduleData();
@@ -361,14 +361,14 @@ public class ScheduleDayController implements Initializable {
             });
 
             javafx.stage.Stage stage = new javafx.stage.Stage();
-            stage.setTitle("Nháº­n diá»‡n khuÃ´n máº·t");
+            stage.setTitle("Nhận diện khuôn mặt");
             stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
             stage.setScene(new javafx.scene.Scene(root));
             stage.showAndWait();
         } catch (java.io.IOException e) {
             e.printStackTrace();
             Alert error = new Alert(Alert.AlertType.ERROR);
-            error.setContentText("KhÃ´ng thá»ƒ má»Ÿ cá»­a sá»• Camera: " + e.getMessage());
+            error.setContentText("Không thể mở cửa sổ Camera: " + e.getMessage());
             error.showAndWait();
         }
     }
@@ -376,33 +376,33 @@ public class ScheduleDayController implements Initializable {
     private List<ScheduleInfo> getSchedulesForDate(LocalDate date) {
         List<ScheduleInfo> schedules = new ArrayList<>();
 
-        // Mock data - trong thá»±c táº¿ sáº½ láº¥y tá»« database
+        // Mock data - trong thực tế sẽ lấy từ database
         if (date.equals(LocalDate.now())) {
             schedules.add(new ScheduleInfo(
-                    "Láº­p trÃ¬nh máº¡ng",
+                    "Lập trình mạng",
                     "07:30",
                     "09:10",
-                    "TS. Nguyá»…n VÄƒn A",
+                    "TS. Nguyễn Văn A",
                     "P.201",
                     "CTK43A",
                     "UPCOMING",
                     30
             ));
             schedules.add(new ScheduleInfo(
-                    "CÆ¡ sá»Ÿ dá»¯ liá»‡u",
+                    "Cơ sở dữ liệu",
                     "09:30",
                     "11:10",
-                    "TS. Tráº§n Thá»‹ B",
+                    "TS. Trần Thị B",
                     "P.305",
                     "CTK43A",
                     "PENDING",
                     0
             ));
             schedules.add(new ScheduleInfo(
-                    "Giáº£i thuáº­t",
+                    "Giải thuật",
                     "13:00",
                     "14:40",
-                    "ThS. Pháº¡m VÄƒn C",
+                    "ThS. Phạm Văn C",
                     "P.401",
                     "CTK43A",
                     "ATTENDED",
@@ -410,10 +410,10 @@ public class ScheduleDayController implements Initializable {
             ));
         } else if (date.equals(LocalDate.now().plusDays(1))) {
             schedules.add(new ScheduleInfo(
-                    "Há»‡ Ä‘iá»u hÃ nh",
+                    "Hệ điều hành",
                     "07:30",
                     "09:10",
-                    "TS. LÃª Minh D",
+                    "TS. Lê Minh D",
                     "P.202",
                     "CTK43A",
                     "PENDING",
@@ -423,7 +423,7 @@ public class ScheduleDayController implements Initializable {
                     "Web Development",
                     "09:30",
                     "11:10",
-                    "ThS. HoÃ ng Thá»‹ E",
+                    "ThS. Hoàng Thị E",
                     "P.306",
                     "CTK43A",
                     "PENDING",
