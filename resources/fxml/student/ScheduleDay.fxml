@@ -17,22 +17,22 @@
 
             <!-- Title -->
             <VBox spacing="4">
-                <Label text="📅  Xem Thời Khóa Biểu Theo Ngày" styleClass="section-title"/>
-                <Label text="Xem chi tiết các lớp học trong ngày" styleClass="section-subtitle"/>
+                <Label text="ðŸ“…  Xem Thá»i KhÃ³a Biá»ƒu Theo NgÃ y" styleClass="section-title"/>
+                <Label text="Xem chi tiáº¿t cÃ¡c lá»›p há»c trong ngÃ y" styleClass="section-subtitle"/>
             </VBox>
 
             <!-- Date selector + Filter -->
             <HBox spacing="16" alignment="CENTER_LEFT">
                 <VBox spacing="6">
-                    <Label text="Chọn ngày" styleClass="field-label"/>
+                    <Label text="Chá»n ngÃ y" styleClass="field-label"/>
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <DatePicker fx:id="dpSelectedDate" 
+                        <DatePicker fx:id="dpSelectedDate"
                                    styleClass="schedule-date-picker"
                                    maxWidth="180"
                                    onAction="#handleDateChanged"/>
-                        <Button text="Hôm nay" styleClass="btn-secondary" 
+                        <Button text="HÃ´m nay" styleClass="btn-secondary"
                                onAction="#handleTodayClick"/>
-                        <Button text="Ngày mai" styleClass="btn-secondary" 
+                        <Button text="NgÃ y mai" styleClass="btn-secondary"
                                onAction="#handleTomorrowClick"/>
                     </HBox>
                 </VBox>
@@ -41,13 +41,13 @@
 
                 <!-- Quick filter buttons -->
                 <VBox spacing="6">
-                    <Label text="Lọc theo" styleClass="field-label"/>
+                    <Label text="Lá»c theo" styleClass="field-label"/>
                     <HBox spacing="8">
-                        <ToggleButton text="Tất cả" styleClass="filter-toggle" 
+                        <ToggleButton fx:id="btnFilterAll" text="Táº¥t cáº£" styleClass="filter-toggle"
                                      selected="true" toggleGroup="$filterGroup"/>
-                        <ToggleButton text="Đã điểm danh" styleClass="filter-toggle"
+                        <ToggleButton fx:id="btnFilterAttended" text="ÄÃ£ Ä‘iá»ƒm danh" styleClass="filter-toggle"
                                      toggleGroup="$filterGroup"/>
-                        <ToggleButton text="Chưa điểm danh" styleClass="filter-toggle"
+                        <ToggleButton fx:id="btnFilterNotAttended" text="ChÆ°a Ä‘iá»ƒm danh" styleClass="filter-toggle"
                                      toggleGroup="$filterGroup"/>
                         <fx:define>
                             <ToggleGroup fx:id="filterGroup"/>
@@ -67,72 +67,72 @@
             <HBox spacing="12">
                 <VBox styleClass="stat-card,stat-card-blue" HBox.hgrow="ALWAYS" spacing="6">
                     <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
-                    <Label text="📚" styleClass="stat-card-icon"/>
+                    <Label text="ðŸ“š" styleClass="stat-card-icon"/>
                     <Label fx:id="lblTotalClassToday" text="0" styleClass="stat-card-number"/>
-                    <Label text="Lớp học hôm nay" styleClass="stat-card-label"/>
+                    <Label text="Lá»›p há»c hÃ´m nay" styleClass="stat-card-label"/>
                 </VBox>
 
                 <VBox styleClass="stat-card,stat-card-green" HBox.hgrow="ALWAYS" spacing="6">
                     <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
-                    <Label text="✅" styleClass="stat-card-icon"/>
+                    <Label text="âœ…" styleClass="stat-card-icon"/>
                     <Label fx:id="lblAttendedToday" text="0" styleClass="stat-card-number"/>
-                    <Label text="Đã điểm danh" styleClass="stat-card-label"/>
+                    <Label text="ÄÃ£ Ä‘iá»ƒm danh" styleClass="stat-card-label"/>
                 </VBox>
 
                 <VBox styleClass="stat-card,stat-card-amber" HBox.hgrow="ALWAYS" spacing="6">
                     <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
-                    <Label text="⏰" styleClass="stat-card-icon"/>
+                    <Label text="â°" styleClass="stat-card-icon"/>
                     <Label fx:id="lblPendingToday" text="0" styleClass="stat-card-number"/>
-                    <Label text="Sắp tới" styleClass="stat-card-label"/>
+                    <Label text="Sáº¯p tá»›i" styleClass="stat-card-label"/>
                 </VBox>
 
                 <VBox styleClass="stat-card,stat-card-red" HBox.hgrow="ALWAYS" spacing="6">
                     <padding><Insets top="16" bottom="16" left="16" right="16"/></padding>
-                    <Label text="⭕" styleClass="stat-card-icon"/>
+                    <Label text="â­•" styleClass="stat-card-icon"/>
                     <Label fx:id="lblPendingAttendance" text="0" styleClass="stat-card-number"/>
-                    <Label text="Chưa điểm danh" styleClass="stat-card-label"/>
+                    <Label text="ChÆ°a Ä‘iá»ƒm danh" styleClass="stat-card-label"/>
                 </VBox>
             </HBox>
 
             <!-- ===== TIMELINE VIEW ===== -->
             <VBox styleClass="schedule-timeline" spacing="0">
-                <Label text="🕐  Lịch trình chi tiết" styleClass="card-title"/>
+                <Label text="ðŸ•  Lá»‹ch trÃ¬nh chi tiáº¿t" styleClass="card-title"/>
                 <Region prefHeight="12"/>
 
                 <!-- Schedule items container -->
                 <VBox fx:id="scheduleTimelineBox" spacing="16"/>
 
                 <!-- Empty state -->
-                <VBox fx:id="emptyScheduleBox" alignment="CENTER" spacing="12" 
+                <VBox fx:id="emptyScheduleBox" alignment="CENTER" spacing="12"
                      visible="false" managed="false">
                     <padding><Insets top="40" bottom="40"/></padding>
-                    <Label text="🎉" style="-fx-font-size: 48px;"/>
-                    <Label text="Không có lớp học trong ngày này" 
+                    <Label text="ðŸŽ‰" style="-fx-font-size: 48px;"/>
+                    <Label text="KhÃ´ng cÃ³ lá»›p há»c trong ngÃ y nÃ y"
                           styleClass="empty-label" style="-fx-font-size: 16px;"/>
-                    <Label text="Hãy tận dụng thời gian để nghỉ ngơi hoặc học tập thêm!" 
+                    <Label text="HÃ£y táº­n dá»¥ng thá»i gian Ä‘á»ƒ nghá»‰ ngÆ¡i hoáº·c há»c táº­p thÃªm!"
                           styleClass="empty-sublabel" style="-fx-font-size: 13px;"/>
                 </VBox>
             </VBox>
 
             <!-- ===== LEGEND ===== -->
             <VBox spacing="8" style="-fx-background-color: #f8fafc; -fx-background-radius: 8; -fx-padding: 16;">
-                <Label text="Chú thích trạng thái" styleClass="field-label"/>
+                <Label text="ChÃº thÃ­ch tráº¡ng thÃ¡i" styleClass="field-label"/>
                 <HBox spacing="24">
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="✅" style="-fx-font-size: 16px;"/>
-                        <Label text="Đã điểm danh" styleClass="legend-text"/>
+                        <Label text="âœ…" style="-fx-font-size: 16px;"/>
+                        <Label text="ÄÃ£ Ä‘iá»ƒm danh" styleClass="legend-text"/>
                     </HBox>
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="⏰" style="-fx-font-size: 16px;"/>
-                        <Label text="Sắp bắt đầu" styleClass="legend-text"/>
+                        <Label text="â°" style="-fx-font-size: 16px;"/>
+                        <Label text="Sáº¯p báº¯t Ä‘áº§u" styleClass="legend-text"/>
                     </HBox>
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="⭕" style="-fx-font-size: 16px;"/>
-                        <Label text="Chưa điểm danh" styleClass="legend-text"/>
+                        <Label text="â­•" style="-fx-font-size: 16px;"/>
+                        <Label text="ChÆ°a Ä‘iá»ƒm danh" styleClass="legend-text"/>
                     </HBox>
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="❌" style="-fx-font-size: 16px;"/>
-                        <Label text="Đã kết thúc / Vắng" styleClass="legend-text"/>
+                        <Label text="âŒ" style="-fx-font-size: 16px;"/>
+                        <Label text="ÄÃ£ káº¿t thÃºc / Váº¯ng" styleClass="legend-text"/>
                     </HBox>
                 </HBox>
             </VBox>

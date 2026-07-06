@@ -8,10 +8,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -22,7 +24,7 @@ import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ScrollPane;
-import database.ScheduleRepository;
+import protocol.RequestType;
 
 public class LecturerScheduleController implements Initializable {
 
@@ -33,6 +35,7 @@ public class LecturerScheduleController implements Initializable {
     @FXML private VBox weekGridContainer, weekListContainer, emptyWeekBox;
     @FXML private HBox weekGridDays;
     @FXML private VBox weekListBox;
+    @FXML private ToggleButton btnViewGrid, btnViewList;
 
     private LocalDate currentWeekStart;
     private String lecturerName = "";
@@ -47,23 +50,38 @@ public class LecturerScheduleController implements Initializable {
         LocalDate today = LocalDate.now();
         // Adjust to Monday
         currentWeekStart = today.minusDays(today.getDayOfWeek().getValue() - 1);
-        
+
+        setupViewModeGroup();
+    }
+
+    private void setupViewModeGroup() {
+        if (viewModeGroup == null) {
+            viewModeGroup = new ToggleGroup();
+        }
+
+        btnViewGrid.setUserData("GRID");
+        btnViewList.setUserData("LIST");
+        btnViewGrid.setToggleGroup(viewModeGroup);
+        btnViewList.setToggleGroup(viewModeGroup);
+        viewModeGroup.selectToggle(btnViewGrid);
+
         viewModeGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                String mode = newVal.getUserData().toString();
-                if (mode.equals("GRID")) {
-                    weekListContainer.setVisible(false);
-                    weekListContainer.setManaged(false);
-                    weekGridContainer.setVisible(true);
-                    weekGridContainer.setManaged(true);
-                } else {
-                    weekGridContainer.setVisible(false);
-                    weekGridContainer.setManaged(false);
-                    weekListContainer.setVisible(true);
-                    weekListContainer.setManaged(true);
-                }
+            if (newVal == null) {
+                viewModeGroup.selectToggle(oldVal != null ? oldVal : btnViewGrid);
+                return;
             }
+            applyViewMode();
         });
+    }
+
+    private void applyViewMode() {
+        ToggleButton selectedMode = (ToggleButton) viewModeGroup.getSelectedToggle();
+        String mode = selectedMode != null ? String.valueOf(selectedMode.getUserData()) : "GRID";
+        boolean grid = "GRID".equals(mode);
+        weekGridContainer.setVisible(grid);
+        weekGridContainer.setManaged(grid);
+        weekListContainer.setVisible(!grid);
+        weekListContainer.setManaged(!grid);
     }
 
     private void loadWeekData() {
@@ -75,21 +93,30 @@ public class LecturerScheduleController implements Initializable {
 
         new Thread(() -> {
             try {
-                List<Map<String,Object>> rawSchedules = ScheduleRepository.getInstance()
-                    .findLecturerSchedulesInRange(lecturerName, currentWeekStart, endOfWeek);
+                protocol.Response res = ServerApi.send(RequestType.GET_LECTURER_SCHEDULE,
+                        java.util.Map.of(
+                                "lecturerName", lecturerName,
+                                "startDate", currentWeekStart.toString(),
+                                "endDate", endOfWeek.toString()));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
 
-                List<ScheduleInfo> schedules = rawSchedules.stream().map(m -> {
+                org.json.JSONArray rawSchedules = ServerApi.getArray(res, "schedules");
+                List<ScheduleInfo> schedules = new ArrayList<>();
+                for (int i = 0; i < rawSchedules.length(); i++) {
+                    org.json.JSONObject m = rawSchedules.getJSONObject(i);
                     ScheduleInfo s = new ScheduleInfo();
-                    s.subject = (String) m.get("subject");
-                    s.className = (String) m.get("className");
-                    s.room = (String) m.get("room");
-                    s.startTime = (String) m.get("startTime");
-                    s.endTime = (String) m.get("endTime");
-                    s.status = (String) m.get("status");
-                    LocalDate d = LocalDate.parse((String) m.get("date"));
+                    s.subject = m.optString("subject", "");
+                    s.className = m.optString("className", "");
+                    s.room = m.optString("room", "");
+                    s.startTime = m.optString("startTime", "");
+                    s.endTime = m.optString("endTime", "");
+                    s.status = m.optString("status", "UPCOMING");
+                    LocalDate d = LocalDate.parse(m.optString("date", currentWeekStart.toString()));
                     s.dayOfWeek = d.getDayOfWeek().getValue();
-                    return s;
-                }).collect(Collectors.toList());
+                    schedules.add(s);
+                }
 
                 Map<Integer, List<ScheduleInfo>> weekSchedules = schedules.stream()
                         .collect(Collectors.groupingBy(s -> s.dayOfWeek));
@@ -107,8 +134,11 @@ public class LecturerScheduleController implements Initializable {
         if (weekSchedules.isEmpty()) {
             emptyWeekBox.setVisible(true);
             emptyWeekBox.setManaged(true);
+            weekGridContainer.setVisible(true);
+            weekGridContainer.setManaged(true);
             weekGridDays.setVisible(false);
             weekListContainer.setVisible(false);
+            weekListContainer.setManaged(false);
         } else {
             emptyWeekBox.setVisible(false);
             emptyWeekBox.setManaged(false);
@@ -116,6 +146,7 @@ public class LecturerScheduleController implements Initializable {
             
             displayGridView(weekSchedules);
             displayListView(weekSchedules);
+            applyViewMode();
         }
 
         int total = weekSchedules.values().stream().mapToInt(List::size).sum();

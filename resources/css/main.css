@@ -633,6 +633,43 @@
     -fx-text-fill: #1a2744;
 }
 
+.filter-toggle:selected:hover {
+    -fx-background-color: #2563eb;
+    -fx-border-color: #2563eb;
+    -fx-text-fill: #ffffff;
+}
+
+/* ===== VIEW MODE TOGGLE BUTTONS ===== */
+.view-mode-toggle {
+    -fx-background-color: #f1f5f9;
+    -fx-background-radius: 6;
+    -fx-border-color: #cbd5e1;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-text-fill: #475569;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 6 12 6 12;
+}
+
+.view-mode-toggle:selected {
+    -fx-background-color: #2563eb;
+    -fx-border-color: #2563eb;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+}
+
+.view-mode-toggle:hover {
+    -fx-background-color: #e2eaf5;
+    -fx-text-fill: #1a2744;
+}
+
+.view-mode-toggle:selected:hover {
+    -fx-background-color: #2563eb;
+    -fx-border-color: #2563eb;
+    -fx-text-fill: #ffffff;
+}
+
 /* ===== SCHEDULE TIMELINE ===== */
 .schedule-timeline {
     -fx-background-color: #ffffff;

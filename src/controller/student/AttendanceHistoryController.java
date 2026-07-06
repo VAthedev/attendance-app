@@ -1,5 +1,6 @@
 package controller.student;
 
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -24,6 +25,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import protocol.RequestType;
 
 public class AttendanceHistoryController implements Initializable {
 
@@ -173,18 +175,30 @@ public class AttendanceHistoryController implements Initializable {
                     throw new Exception("Không xác định được sinh viên đăng nhập.");
                 }
                 
-                service.AttendanceService attendanceService = new service.AttendanceService();
-                List<model.Attendance> rawRecords = attendanceService.getAttendanceHistory(studentId);
-                
+                protocol.Response res = ServerApi.send(RequestType.GET_ATTENDANCE_HISTORY,
+                        java.util.Map.of("studentId", studentId));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
+                org.json.JSONArray rawRecords = ServerApi.getArray(res, "records");
+
                 List<AttendanceRecord> records = new ArrayList<>();
-                for (model.Attendance att : rawRecords) {
+                for (int i = 0; i < rawRecords.length(); i++) {
+                    org.json.JSONObject att = rawRecords.getJSONObject(i);
+                    LocalDate date = null;
+                    String dateStr = att.optString("date", "");
+                    if (!dateStr.isBlank()) {
+                        try {
+                            date = LocalDate.parse(dateStr);
+                        } catch (Exception ignored) {}
+                    }
                     records.add(new AttendanceRecord(
-                        att.getAttendanceDate(),
-                        att.getSubjectName() != null ? att.getSubjectName() : "Unknown",
-                        att.getTimeString() != null ? att.getTimeString() : "",
-                        att.getMethod(),
-                        att.getStatus(),
-                        att.getRoom() != null ? att.getRoom() : att.getLocation()
+                        date,
+                        att.optString("subjectName", "Unknown"),
+                        att.optString("timeString", ""),
+                        att.optString("method", ""),
+                        att.optString("status", ""),
+                        !att.optString("room", "").isBlank() ? att.optString("room", "") : att.optString("location", "")
                     ));
                 }
 

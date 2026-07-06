@@ -1,9 +1,6 @@
 package controller.lecturer;
 
-import database.AttendanceRepository;
-import database.EnrollmentRepository;
-import database.ScheduleRepository;
-import database.SessionRepository;
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -14,7 +11,7 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import org.bson.Document;
+import protocol.RequestType;
 
 import java.net.URL;
 import java.util.List;
@@ -49,7 +46,12 @@ public class LecturerStatisticsController implements Initializable {
     private void loadClasses() {
         new Thread(() -> {
             try {
-                List<String> classes = ScheduleRepository.getInstance().findUniqueClassesByLecturerName(lecturerName);
+                protocol.Response res = ServerApi.send(RequestType.GET_LECTURER_CLASSES,
+                        java.util.Map.of("lecturerName", lecturerName));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
+                List<String> classes = ServerApi.getStringList(res, "classes");
                 Platform.runLater(() -> {
                     cbClasses.getItems().clear();
                     cbClasses.getItems().addAll(classes);
@@ -64,63 +66,43 @@ public class LecturerStatisticsController implements Initializable {
     }
 
     private void loadStatisticsForClass(String classSelection) {
-        // classSelection is like "CTK43A - Lập trình mạng"
-        String classCode = classSelection.split(" - ")[0];
-
         new Thread(() -> {
             try {
-                // 1. Get total students
-                long totalStudents = EnrollmentRepository.getInstance().countStudentsByClassCode(classCode);
+                protocol.Response res = ServerApi.send(RequestType.GET_LECTURER_STATS,
+                        java.util.Map.of("classSelection", classSelection));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
 
-                // 2. Get sessions
-                List<Document> sessions = SessionRepository.getInstance().findSessionsByClassCode(classCode);
-                int totalSessions = sessions.size();
+                long totalStudents = Long.parseLong(res.getDataValue("totalStudents"));
+                int totalSessions = Integer.parseInt(res.getDataValue("totalSessions"));
+                long totalPresent = Long.parseLong(res.getDataValue("totalPresent"));
+                long totalAbsent = Long.parseLong(res.getDataValue("totalAbsent"));
+                double avgRate = Double.parseDouble(res.getDataValue("avgRate"));
 
-                // 3. Process attendance for each session
                 XYChart.Series<String, Number> series = new XYChart.Series<>();
-                series.setName("Số sinh viên có mặt");
-
-                long totalPresentInAllSessions = 0;
-                long totalPossibleAttendances = totalStudents * totalSessions;
-
-                for (Document session : sessions) {
-                    String sessionId = session.get("_id").toString();
-                    String dateStr = session.getString("date");
-                    
-                    List<Document> attendances = new AttendanceRepository().findBySessionId(sessionId);
-                    long presentCount = attendances.stream().filter(a -> "PRESENT".equals(a.getString("status"))).count();
-                    
-                    totalPresentInAllSessions += presentCount;
-                    
-                    series.getData().add(new XYChart.Data<>(dateStr, presentCount));
+                series.setName("So sinh vien co mat");
+                org.json.JSONArray bars = ServerApi.getArray(res, "bars");
+                for (int i = 0; i < bars.length(); i++) {
+                    org.json.JSONObject bar = bars.getJSONObject(i);
+                    series.getData().add(new XYChart.Data<>(bar.optString("label", ""), bar.optLong("presentCount", 0)));
                 }
-
-                long finalTotalStudents = totalStudents;
-                long finalTotalPresent = totalPresentInAllSessions;
-                long finalTotalAbsent = totalPossibleAttendances - totalPresentInAllSessions;
-                
-                double avgRate = 0;
-                if (totalPossibleAttendances > 0) {
-                    avgRate = (double) totalPresentInAllSessions / totalPossibleAttendances * 100;
-                }
-                double finalAvgRate = avgRate;
 
                 Platform.runLater(() -> {
-                    lblTotalStudents.setText(String.valueOf(finalTotalStudents));
+                    lblTotalStudents.setText(String.valueOf(totalStudents));
                     lblTotalSessions.setText(String.valueOf(totalSessions));
-                    lblAvgAttendance.setText(String.format("%.1f%%", finalAvgRate));
+                    lblAvgAttendance.setText(String.format("%.1f%%", avgRate));
 
                     barChart.setAnimated(false);
                     barChart.getData().clear();
                     barChart.getData().add(series);
 
                     ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList(
-                            new PieChart.Data("Có mặt (" + finalTotalPresent + ")", finalTotalPresent),
-                            new PieChart.Data("Vắng mặt (" + finalTotalAbsent + ")", finalTotalAbsent)
+                            new PieChart.Data("Co mat (" + totalPresent + ")", totalPresent),
+                            new PieChart.Data("Vang mat (" + totalAbsent + ")", totalAbsent)
                     );
                     pieChart.setData(pieData);
                 });
-
             } catch (Exception e) {
                 e.printStackTrace();
             }

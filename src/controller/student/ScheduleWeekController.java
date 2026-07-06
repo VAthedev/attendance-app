@@ -29,6 +29,7 @@ public class ScheduleWeekController implements Initializable {
     @FXML private HBox weekGridDays;
     @FXML private VBox weekListBox, weekGridContainer, weekListContainer, emptyWeekBox;
     @FXML private ToggleGroup viewModeGroup;
+    @FXML private ToggleButton btnViewGrid, btnViewList;
 
     private LocalDate currentWeekStart;
     private ToggleGroup filterGroup;
@@ -38,18 +39,30 @@ public class ScheduleWeekController implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
         currentWeekStart = LocalDate.now().with(ChronoField.DAY_OF_WEEK, 1);
         filterGroup = new ToggleGroup();
-        
-        if (viewModeGroup != null) {
-            viewModeGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal == null) {
-                    viewModeGroup.selectToggle(oldVal);
-                    return;
-                }
-                renderSchedules();
-            });
-        }
+
+        setupViewModeGroup();
         
         updateWeekDisplay();
+    }
+
+    private void setupViewModeGroup() {
+        if (viewModeGroup == null) {
+            viewModeGroup = new ToggleGroup();
+        }
+
+        btnViewGrid.setUserData("GRID");
+        btnViewList.setUserData("LIST");
+        btnViewGrid.setToggleGroup(viewModeGroup);
+        btnViewList.setToggleGroup(viewModeGroup);
+        viewModeGroup.selectToggle(btnViewGrid);
+
+        viewModeGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal == null) {
+                viewModeGroup.selectToggle(oldVal != null ? oldVal : btnViewGrid);
+                return;
+            }
+            renderSchedules();
+        });
     }
 
     @FXML
@@ -135,13 +148,17 @@ public class ScheduleWeekController implements Initializable {
     private void renderSchedules() {
         if (currentWeekSchedules.isEmpty() || currentWeekSchedules.values().stream().allMatch(List::isEmpty)) {
             weekGridContainer.setVisible(true);
+            weekGridContainer.setManaged(true);
             weekListContainer.setVisible(false);
+            weekListContainer.setManaged(false);
             emptyWeekBox.setVisible(true);
+            emptyWeekBox.setManaged(true);
             updateStats(0, 0, 0, 0);
             return;
         }
 
         emptyWeekBox.setVisible(false);
+        emptyWeekBox.setManaged(false);
         
         ToggleButton selectedMode = (ToggleButton) viewModeGroup.getSelectedToggle();
         String viewMode = selectedMode != null ? (String) selectedMode.getUserData() : "GRID";
@@ -149,11 +166,15 @@ public class ScheduleWeekController implements Initializable {
         if ("GRID".equals(viewMode)) {
             displayGridView(currentWeekSchedules);
             weekGridContainer.setVisible(true);
+            weekGridContainer.setManaged(true);
             weekListContainer.setVisible(false);
+            weekListContainer.setManaged(false);
         } else {
             displayListView(currentWeekSchedules);
             weekGridContainer.setVisible(false);
+            weekGridContainer.setManaged(false);
             weekListContainer.setVisible(true);
+            weekListContainer.setManaged(true);
         }
 
         int total = currentWeekSchedules.values().stream().mapToInt(List::size).sum();

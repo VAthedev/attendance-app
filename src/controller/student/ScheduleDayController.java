@@ -17,6 +17,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -27,6 +28,7 @@ public class ScheduleDayController implements Initializable {
     @FXML private DatePicker dpSelectedDate;
     @FXML private Label lblTotalClassToday, lblAttendedToday, lblPendingToday, lblPendingAttendance;
     @FXML private VBox scheduleTimelineBox, emptyScheduleBox;
+    @FXML private ToggleButton btnFilterAll, btnFilterAttended, btnFilterNotAttended;
 
     private LocalDate currentSelectedDate;
     @FXML private ToggleGroup filterGroup;
@@ -36,18 +38,33 @@ public class ScheduleDayController implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
         currentSelectedDate = LocalDate.now();
         dpSelectedDate.setValue(currentSelectedDate);
-        
-        if (filterGroup != null) {
-            filterGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal == null) {
-                    filterGroup.selectToggle(oldVal);
-                    return;
-                }
-                renderSchedules();
-            });
-        }
+
+        setupFilterGroup();
         
         loadScheduleData();
+    }
+
+    private void setupFilterGroup() {
+        if (filterGroup == null) {
+            filterGroup = new ToggleGroup();
+        }
+
+        btnFilterAll.setUserData("ALL");
+        btnFilterAttended.setUserData("ATTENDED");
+        btnFilterNotAttended.setUserData("NOT_ATTENDED");
+
+        btnFilterAll.setToggleGroup(filterGroup);
+        btnFilterAttended.setToggleGroup(filterGroup);
+        btnFilterNotAttended.setToggleGroup(filterGroup);
+        filterGroup.selectToggle(btnFilterAll);
+
+        filterGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal == null) {
+                filterGroup.selectToggle(oldVal != null ? oldVal : btnFilterAll);
+                return;
+            }
+            renderSchedules();
+        });
     }
 
     @FXML
@@ -81,7 +98,7 @@ public class ScheduleDayController implements Initializable {
         client.network.SocketClient.getInstance().sendAsync(req, res -> {
             if (!res.isOk()) {
                 javafx.application.Platform.runLater(() -> {
-                    System.err.println("Lỗi lấy TKB: " + res.getMessage());
+                    System.err.println("Lá»—i láº¥y TKB: " + res.getMessage());
                 });
                 return;
             }
@@ -182,15 +199,16 @@ public class ScheduleDayController implements Initializable {
         
         updateStats(total, attended, upcoming, pending);
 
-        String filterText = "Tất cả";
+        String filterMode = "ALL";
         if (filterGroup != null && filterGroup.getSelectedToggle() != null) {
-            filterText = ((javafx.scene.control.ToggleButton) filterGroup.getSelectedToggle()).getText();
+            Object userData = filterGroup.getSelectedToggle().getUserData();
+            filterMode = userData != null ? userData.toString() : "ALL";
         }
 
         for (ScheduleInfo schedule : allSchedulesToday) {
             boolean show = true;
-            if ("Đã điểm danh".equals(filterText) && !schedule.status.equals("ATTENDED")) show = false;
-            if ("Chưa điểm danh".equals(filterText) && schedule.status.equals("ATTENDED")) show = false;
+            if ("ATTENDED".equals(filterMode) && !schedule.status.equals("ATTENDED")) show = false;
+            if ("NOT_ATTENDED".equals(filterMode) && schedule.status.equals("ATTENDED")) show = false;
             
             if (show) {
                 VBox scheduleItem = createScheduleItem(schedule);
@@ -227,7 +245,7 @@ public class ScheduleDayController implements Initializable {
         subjectInfo.setStyle("-fx-hgrow: ALWAYS;");
         Label subject = new Label(schedule.subject);
         subject.getStyleClass().add("schedule-subject-large");
-        Label lecturer = new Label("👤  " + schedule.lecturer);
+        Label lecturer = new Label("ðŸ‘¤  " + schedule.lecturer);
         lecturer.getStyleClass().add("schedule-lecturer");
         subjectInfo.getChildren().addAll(subject, lecturer);
 
@@ -243,7 +261,7 @@ public class ScheduleDayController implements Initializable {
 
         Label room = new Label("P. " + schedule.room);
         room.getStyleClass().add("schedule-location");
-        Label classInfo = new Label("👥  Lớp: " + schedule.className);
+        Label classInfo = new Label("ðŸ‘¥  Lá»›p: " + schedule.className);
         classInfo.getStyleClass().add("schedule-location");
 
         detailRow.getChildren().addAll(room, classInfo);
@@ -253,20 +271,20 @@ public class ScheduleDayController implements Initializable {
         footer.setStyle("-fx-padding: 12 0 0 100px; -fx-alignment: CENTER_LEFT;");
 
         if (schedule.status.equals("PENDING")) {
-            Button checkInBtn = new Button("✓  Điểm danh ngay");
+            Button checkInBtn = new Button("âœ“  Äiá»ƒm danh ngay");
             checkInBtn.getStyleClass().add("btn-attendance");
             checkInBtn.setOnAction(e -> handleCheckIn(schedule));
 
-            Button checkDetailsBtn = new Button("Chi tiết");
+            Button checkDetailsBtn = new Button("Chi tiáº¿t");
             checkDetailsBtn.getStyleClass().add("btn-secondary");
 
             footer.getChildren().addAll(checkInBtn, checkDetailsBtn);
         } else if (schedule.status.equals("UPCOMING")) {
-            Label upcomingLabel = new Label("⏳ Sắp bắt đầu trong " + schedule.minutesUntilStart + " phút");
+            Label upcomingLabel = new Label("â³ Sáº¯p báº¯t Ä‘áº§u trong " + schedule.minutesUntilStart + " phÃºt");
             upcomingLabel.setStyle("-fx-text-fill: #f59e0b; -fx-font-size: 12px;");
             footer.getChildren().add(upcomingLabel);
         } else if (schedule.status.equals("ATTENDED")) {
-            Label attendedLabel = new Label("✓ Đã điểm danh lúc " + schedule.attendanceTime);
+            Label attendedLabel = new Label("âœ“ ÄÃ£ Ä‘iá»ƒm danh lÃºc " + schedule.attendanceTime);
             attendedLabel.setStyle("-fx-text-fill: #22c55e; -fx-font-size: 12px;");
             footer.getChildren().add(attendedLabel);
         }
@@ -284,19 +302,19 @@ public class ScheduleDayController implements Initializable {
         Label badge = new Label();
         switch (status) {
             case "ATTENDED":
-                badge.setText("✅ Đã điểm danh");
+                badge.setText("âœ… ÄÃ£ Ä‘iá»ƒm danh");
                 badge.getStyleClass().add("status-attended");
                 break;
             case "PENDING":
-                badge.setText("⭕ Chưa điểm danh");
+                badge.setText("â­• ChÆ°a Ä‘iá»ƒm danh");
                 badge.getStyleClass().add("status-pending");
                 break;
             case "UPCOMING":
-                badge.setText("⏰ Sắp tới");
+                badge.setText("â° Sáº¯p tá»›i");
                 badge.getStyleClass().add("status-upcoming");
                 break;
             case "PAST":
-                badge.setText("❌ Đã kết thúc");
+                badge.setText("âŒ ÄÃ£ káº¿t thÃºc");
                 badge.getStyleClass().add("status-past");
                 break;
         }
@@ -333,9 +351,9 @@ public class ScheduleDayController implements Initializable {
                 
                 javafx.application.Platform.runLater(() -> {
                     Alert success = new Alert(Alert.AlertType.INFORMATION);
-                    success.setTitle("Thành công");
-                    success.setHeaderText("Điểm danh khuôn mặt thành công!");
-                    success.setContentText("Đã ghi nhận điểm danh cho lớp " + schedule.subject + " lúc " + schedule.attendanceTime);
+                    success.setTitle("ThÃ nh cÃ´ng");
+                    success.setHeaderText("Äiá»ƒm danh khuÃ´n máº·t thÃ nh cÃ´ng!");
+                    success.setContentText("ÄÃ£ ghi nháº­n Ä‘iá»ƒm danh cho lá»›p " + schedule.subject + " lÃºc " + schedule.attendanceTime);
                     success.showAndWait();
                     
                     loadScheduleData();
@@ -343,14 +361,14 @@ public class ScheduleDayController implements Initializable {
             });
 
             javafx.stage.Stage stage = new javafx.stage.Stage();
-            stage.setTitle("Nhận diện khuôn mặt");
+            stage.setTitle("Nháº­n diá»‡n khuÃ´n máº·t");
             stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
             stage.setScene(new javafx.scene.Scene(root));
             stage.showAndWait();
         } catch (java.io.IOException e) {
             e.printStackTrace();
             Alert error = new Alert(Alert.AlertType.ERROR);
-            error.setContentText("Không thể mở cửa sổ Camera: " + e.getMessage());
+            error.setContentText("KhÃ´ng thá»ƒ má»Ÿ cá»­a sá»• Camera: " + e.getMessage());
             error.showAndWait();
         }
     }
@@ -358,33 +376,33 @@ public class ScheduleDayController implements Initializable {
     private List<ScheduleInfo> getSchedulesForDate(LocalDate date) {
         List<ScheduleInfo> schedules = new ArrayList<>();
 
-        // Mock data - trong thực tế sẽ lấy từ database
+        // Mock data - trong thá»±c táº¿ sáº½ láº¥y tá»« database
         if (date.equals(LocalDate.now())) {
             schedules.add(new ScheduleInfo(
-                    "Lập trình mạng",
+                    "Láº­p trÃ¬nh máº¡ng",
                     "07:30",
                     "09:10",
-                    "TS. Nguyễn Văn A",
+                    "TS. Nguyá»…n VÄƒn A",
                     "P.201",
                     "CTK43A",
                     "UPCOMING",
                     30
             ));
             schedules.add(new ScheduleInfo(
-                    "Cơ sở dữ liệu",
+                    "CÆ¡ sá»Ÿ dá»¯ liá»‡u",
                     "09:30",
                     "11:10",
-                    "TS. Trần Thị B",
+                    "TS. Tráº§n Thá»‹ B",
                     "P.305",
                     "CTK43A",
                     "PENDING",
                     0
             ));
             schedules.add(new ScheduleInfo(
-                    "Giải thuật",
+                    "Giáº£i thuáº­t",
                     "13:00",
                     "14:40",
-                    "ThS. Phạm Văn C",
+                    "ThS. Pháº¡m VÄƒn C",
                     "P.401",
                     "CTK43A",
                     "ATTENDED",
@@ -392,10 +410,10 @@ public class ScheduleDayController implements Initializable {
             ));
         } else if (date.equals(LocalDate.now().plusDays(1))) {
             schedules.add(new ScheduleInfo(
-                    "Hệ điều hành",
+                    "Há»‡ Ä‘iá»u hÃ nh",
                     "07:30",
                     "09:10",
-                    "TS. Lê Minh D",
+                    "TS. LÃª Minh D",
                     "P.202",
                     "CTK43A",
                     "PENDING",
@@ -405,7 +423,7 @@ public class ScheduleDayController implements Initializable {
                     "Web Development",
                     "09:30",
                     "11:10",
-                    "ThS. Hoàng Thị E",
+                    "ThS. HoÃ ng Thá»‹ E",
                     "P.306",
                     "CTK43A",
                     "PENDING",

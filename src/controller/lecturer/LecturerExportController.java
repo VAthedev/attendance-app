@@ -1,9 +1,6 @@
 package controller.lecturer;
 
-import database.AttendanceRepository;
-import database.EnrollmentRepository;
-import database.ScheduleRepository;
-import database.SessionRepository;
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -15,15 +12,13 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.stage.FileChooser;
-import org.bson.Document;
+import protocol.RequestType;
 
 import java.io.File;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.ResourceBundle;
 
 public class LecturerExportController implements Initializable {
@@ -54,10 +49,8 @@ public class LecturerExportController implements Initializable {
         colStudentName.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().studentName));
         colPresent.setCellValueFactory(cellData -> new SimpleStringProperty(String.valueOf(cellData.getValue().presentCount)));
         colAbsent.setCellValueFactory(cellData -> new SimpleStringProperty(String.valueOf(cellData.getValue().absentCount)));
-        colAttendanceRate.setCellValueFactory(cellData -> {
-            double rate = cellData.getValue().getAttendanceRate();
-            return new SimpleStringProperty(String.format("%.1f%%", rate));
-        });
+        colAttendanceRate.setCellValueFactory(cellData ->
+                new SimpleStringProperty(String.format("%.1f%%", cellData.getValue().getAttendanceRate())));
         tableStudents.setItems(studentDataList);
     }
 
@@ -69,7 +62,12 @@ public class LecturerExportController implements Initializable {
     private void loadClasses() {
         new Thread(() -> {
             try {
-                List<String> classes = ScheduleRepository.getInstance().findUniqueClassesByLecturerName(lecturerName);
+                protocol.Response res = ServerApi.send(RequestType.GET_LECTURER_CLASSES,
+                        java.util.Map.of("lecturerName", lecturerName));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
+                List<String> classes = ServerApi.getStringList(res, "classes");
                 Platform.runLater(() -> {
                     cbClasses.getItems().clear();
                     cbClasses.getItems().addAll(classes);
@@ -84,50 +82,32 @@ public class LecturerExportController implements Initializable {
     }
 
     private void loadTableDataForClass(String classSelection) {
-        String classCode = classSelection.split(" - ")[0];
-
         new Thread(() -> {
             try {
-                List<Document> enrollments = EnrollmentRepository.getInstance().findStudentsByClassCode(classCode);
-                List<Document> sessions = SessionRepository.getInstance().findSessionsByClassCode(classCode);
-
-                Map<String, StudentExportData> studentMap = new HashMap<>();
-
-                for (Document enrollment : enrollments) {
-                    String studentId = enrollment.getString("student_id");
-                    Document studentDetails = enrollment.get("student_details", Document.class);
-                    String studentName = studentDetails != null ? studentDetails.getString("full_name") : "Không rõ";
-                    
-                    studentMap.put(studentId, new StudentExportData(studentId, studentName, sessions.size()));
+                protocol.Response res = ServerApi.send(RequestType.GET_LECTURER_EXPORT_DATA,
+                        java.util.Map.of("classSelection", classSelection));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
                 }
 
-                for (Document session : sessions) {
-                    String sessionId = session.get("_id").toString();
-                    List<Document> attendances = new AttendanceRepository().findBySessionId(sessionId);
-
-                    for (Document attendance : attendances) {
-                        String studentId = attendance.getString("student_id");
-                        String status = attendance.getString("status");
-                        
-                        StudentExportData data = studentMap.get(studentId);
-                        if (data != null) {
-                            if ("PRESENT".equals(status)) {
-                                data.presentCount++;
-                            } else {
-                                data.absentCount++;
-                            }
-                        }
-                    }
+                org.json.JSONArray students = ServerApi.getArray(res, "students");
+                java.util.List<StudentExportData> rows = new java.util.ArrayList<>();
+                for (int i = 0; i < students.length(); i++) {
+                    org.json.JSONObject student = students.getJSONObject(i);
+                    StudentExportData data = new StudentExportData(
+                            student.optString("studentId", ""),
+                            student.optString("studentName", ""),
+                            student.optInt("totalSessions", 0));
+                    data.presentCount = student.optInt("presentCount", 0);
+                    data.absentCount = student.optInt("absentCount", 0);
+                    rows.add(data);
                 }
 
                 Platform.runLater(() -> {
                     studentDataList.clear();
-                    studentDataList.addAll(studentMap.values());
-                    
-                    // Sort by student ID
+                    studentDataList.addAll(rows);
                     studentDataList.sort((d1, d2) -> d1.studentId.compareTo(d2.studentId));
                 });
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -137,14 +117,14 @@ public class LecturerExportController implements Initializable {
     @FXML
     public void handleExportCSV() {
         if (studentDataList.isEmpty()) {
-            showAlert("Lỗi", "Không có dữ liệu để xuất.");
+            showAlert("Loi", "Khong co du lieu de xuat.");
             return;
         }
 
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Lưu file danh sách điểm danh");
+        fileChooser.setTitle("Luu file danh sach diem danh");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
-        
+
         String classSelection = cbClasses.getValue();
         String defaultFileName = "Danh_sach_diem_danh";
         if (classSelection != null) {
@@ -160,11 +140,9 @@ public class LecturerExportController implements Initializable {
 
     private void saveDataToFile(File file) {
         try (PrintWriter writer = new PrintWriter(file, StandardCharsets.UTF_8)) {
-            // Write BOM for UTF-8 Excel compatibility
             writer.write('\ufeff');
-            
-            writer.println("MSSV,Họ và Tên,Số buổi có mặt,Số buổi vắng,Tỉ lệ chuyên cần (%)");
-            
+            writer.println("MSSV,Ho va Ten,So buoi co mat,So buoi vang,Ti le chuyen can (%)");
+
             for (StudentExportData data : studentDataList) {
                 String line = String.format("%s,%s,%d,%d,%.1f",
                         escapeCSV(data.studentId),
@@ -174,11 +152,11 @@ public class LecturerExportController implements Initializable {
                         data.getAttendanceRate());
                 writer.println(line);
             }
-            
-            showAlert("Thành công", "Đã lưu danh sách điểm danh thành công!");
+
+            showAlert("Thanh cong", "Da luu danh sach diem danh thanh cong!");
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Lỗi", "Không thể lưu file: " + e.getMessage());
+            showAlert("Loi", "Khong the luu file: " + e.getMessage());
         }
     }
 
@@ -191,7 +169,7 @@ public class LecturerExportController implements Initializable {
     }
 
     private void showAlert(String title, String message) {
-        Alert alert = new Alert(title.equals("Lỗi") ? Alert.AlertType.ERROR : Alert.AlertType.INFORMATION);
+        Alert alert = new Alert(title.equals("Loi") ? Alert.AlertType.ERROR : Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);

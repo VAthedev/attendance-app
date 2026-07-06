@@ -5,13 +5,12 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.function.Consumer;
 
+import client.network.ServerApi;
 import client.network.SocketClient;
-import database.ChatRepository;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -45,7 +44,6 @@ public class ChatController implements Initializable {
     @FXML private Button sendButton;
 
     private final SocketClient client = SocketClient.getInstance();
-    private final ChatRepository chatRepository = new ChatRepository();
     private final Consumer<Response> pushListener = this::handlePush;
     private final ObservableList<RoomOption> roomOptions = FXCollections.observableArrayList();
 
@@ -60,34 +58,37 @@ public class ChatController implements Initializable {
         client.addPushListener(pushListener);
 
         if (messageListBox != null) {
-            addSystemMessage("Chọn một môn học để vào phòng chat. Lịch sử 30 ngày gần nhất sẽ được nạp tự động.");
+            addSystemMessage("Chon mot phong chat de tai lich su 30 ngay gan nhat.");
         }
-
         if (lblMiniUserName != null) {
             lblMiniUserName.setText(client.getDisplayNameOrFallback());
         }
 
-        loadRooms();
         cbRooms.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> {
             RoomOption selected = findRoomByDisplay(newValue);
             if (selected != null) {
                 switchRoom(selected);
             }
         });
+        loadRooms();
     }
 
     private void loadRooms() {
-        try {
-            List<Map<String, Object>> rooms = chatRepository.findChatRooms();
+        Request req = new Request(RequestType.GET_CHAT_ROOMS);
+        client.sendAsync(req, res -> {
             roomOptions.clear();
-            if (rooms != null) {
-                for (Map<String, Object> room : rooms) {
-                    String roomKey = value(room.get("roomKey"), "");
-                    String roomName = value(room.get("roomName"), roomKey);
+            if (res.isOk()) {
+                org.json.JSONArray rooms = ServerApi.getArray(res, "rooms");
+                for (int i = 0; i < rooms.length(); i++) {
+                    org.json.JSONObject room = rooms.getJSONObject(i);
+                    String roomKey = room.optString("roomKey", "");
+                    String roomName = room.optString("roomName", roomKey);
                     if (!roomKey.isBlank()) {
                         roomOptions.add(new RoomOption(roomKey, roomName));
                     }
                 }
+            } else {
+                setStatus("Khong tai duoc danh sach phong chat: " + res.getMessage());
             }
 
             if (roomOptions.isEmpty()) {
@@ -95,18 +96,11 @@ public class ChatController implements Initializable {
             }
 
             cbRooms.setItems(FXCollections.observableArrayList(
-                roomOptions.stream().map(RoomOption::displayText).toList()
+                    roomOptions.stream().map(RoomOption::displayText).toList()
             ));
             cbRooms.getSelectionModel().selectFirst();
             switchRoom(roomOptions.get(0));
-        } catch (Exception e) {
-            setStatus("Không tải được danh sách phòng chat: " + e.getMessage());
-            roomOptions.clear();
-            roomOptions.add(new RoomOption("GENERAL", "Chat chung"));
-            cbRooms.setItems(FXCollections.observableArrayList(roomOptions.get(0).displayText()));
-            cbRooms.getSelectionModel().selectFirst();
-            switchRoom(roomOptions.get(0));
-        }
+        });
     }
 
     private void switchRoom(RoomOption room) {
@@ -122,9 +116,9 @@ public class ChatController implements Initializable {
             lblCurrentRoom.setText(room.roomKey);
         }
         if (lblRoomSubtitle != null) {
-            lblRoomSubtitle.setText("Phòng môn học: " + room.roomKey + " • lịch sử 30 ngày gần nhất");
+            lblRoomSubtitle.setText("Phong: " + room.roomKey + " - lich su 30 ngay gan nhat");
         }
-        setStatus("Đang tải lịch sử...");
+        setStatus("Dang tai lich su...");
         requestHistory(room.roomKey, room.roomName);
     }
 
@@ -136,7 +130,7 @@ public class ChatController implements Initializable {
         Request req = new Request(RequestType.GET_CHAT_HISTORY, payload);
         client.sendAsync(req, res -> {
             if (!res.isOk()) {
-                appendLine("[Lỗi tải lịch sử] " + res.getMessage());
+                appendLine("[Loi tai lich su] " + res.getMessage());
                 return;
             }
 
@@ -144,7 +138,7 @@ public class ChatController implements Initializable {
             Platform.runLater(() -> {
                 messageListBox.getChildren().clear();
                 if (history == null || history.isBlank()) {
-                    addSystemMessage("Chưa có tin nhắn nào trong 30 ngày gần đây. Hãy mở đầu cuộc trò chuyện.");
+                    addSystemMessage("Chua co tin nhan nao trong 30 ngay gan day.");
                 } else {
                     String normalizedHistory = history.replace("\\n", "\n");
                     for (String line : normalizedHistory.split("\\n")) {
@@ -153,7 +147,7 @@ public class ChatController implements Initializable {
                         }
                     }
                 }
-                setStatus("Đã tải " + value(res.getDataValue("count"), "0") + " tin nhắn");
+                setStatus("Da tai " + value(res.getDataValue("count"), "0") + " tin nhan");
             });
         });
     }
@@ -173,7 +167,7 @@ public class ChatController implements Initializable {
         Request req = new Request(RequestType.SEND_CHAT, payload);
         client.sendAsync(req, res -> {
             if (!res.isOk()) {
-                appendLine("[Lỗi] " + res.getMessage());
+                appendLine("[Loi] " + res.getMessage());
             } else {
                 messageField.clear();
             }
@@ -220,7 +214,6 @@ public class ChatController implements Initializable {
         HBox row = new HBox();
         row.setFillHeight(false);
         row.setAlignment(isMine ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
-        row.setPadding(new Insets(0, 0, 0, 0));
 
         if (isMine) {
             Region spacer = new Region();
@@ -252,23 +245,22 @@ public class ChatController implements Initializable {
         card.setStyle("-fx-padding: 0;");
 
         HBox header = new HBox(8);
-        header.setAlignment(Pos.CENTER_LEFT);
+        header.setAlignment(isMine ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
 
-        Label avatar = new Label(isMine ? "🙂" : "👤");
+        Label avatar = new Label(isMine ? ":)" : "U");
         avatar.setMinSize(30, 30);
         avatar.setPrefSize(30, 30);
         avatar.setAlignment(Pos.CENTER);
         avatar.setStyle("-fx-background-color: " + (isMine ? "#dbeafe" : "#eef2ff") + "; -fx-background-radius: 999; -fx-font-size: 14px;");
 
         VBox nameBox = new VBox(1);
-        Label name = new Label(sender != null && !sender.isBlank() ? sender : "Ẩn danh");
+        Label name = new Label(sender != null && !sender.isBlank() ? sender : "An danh");
         name.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #475569;");
-        Label time = new Label(formatTimestamp(timestamp) + (realtime ? " • realtime" : ""));
+        Label time = new Label(formatTimestamp(timestamp) + (realtime ? " - realtime" : ""));
         time.setStyle("-fx-font-size: 10px; -fx-text-fill: #94a3b8;");
         nameBox.getChildren().addAll(name, time);
 
         if (isMine) {
-            header.setAlignment(Pos.CENTER_RIGHT);
             header.getChildren().addAll(nameBox, avatar);
         } else {
             header.getChildren().addAll(avatar, nameBox);
@@ -277,14 +269,10 @@ public class ChatController implements Initializable {
         Label body = new Label(content != null ? content : "");
         body.setWrapText(true);
         body.setMaxWidth(420);
-        body.setStyle("-fx-font-size: 13px; -fx-text-fill: #0f172a; -fx-padding: 10 12 10 12; -fx-background-radius: 16; -fx-border-radius: 16; -fx-border-width: 1; " +
+        body.setStyle("-fx-font-size: 13px; -fx-padding: 10 12 10 12; -fx-background-radius: 16; -fx-border-radius: 16; -fx-border-width: 1; " +
                 (isMine
                         ? "-fx-background-color: #2563eb; -fx-text-fill: white; -fx-border-color: #2563eb;"
-                        : "-fx-background-color: #ffffff; -fx-border-color: #dbe4f0;"));
-
-        if (isMine) {
-            body.setStyle("-fx-font-size: 13px; -fx-text-fill: white; -fx-padding: 10 12 10 12; -fx-background-radius: 16; -fx-border-radius: 16; -fx-border-width: 1; -fx-background-color: #2563eb; -fx-border-color: #2563eb;");
-        }
+                        : "-fx-background-color: #ffffff; -fx-text-fill: #0f172a; -fx-border-color: #dbe4f0;"));
 
         card.getChildren().addAll(header, body);
         return card;

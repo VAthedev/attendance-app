@@ -1,11 +1,13 @@
 package controller.widgets;
 
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import protocol.RequestType;
 
 public class StudentTodayScheduleWidgetController {
 
@@ -16,22 +18,26 @@ public class StudentTodayScheduleWidgetController {
         if (studentId == null || studentId.isEmpty()) return;
         new Thread(() -> {
             try {
-                java.time.LocalDate today = java.time.LocalDate.now();
-                java.util.List<java.util.Map<String,Object>> todaySchedules = database.ScheduleRepository.getInstance()
-                        .findStudentSchedulesByDate(studentId, today);
+                protocol.Response res = ServerApi.send(RequestType.GET_STUDENT_TODAY_SCHEDULE,
+                        java.util.Map.of("studentId", studentId));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
+                org.json.JSONArray todaySchedules = ServerApi.getArray(res, "schedules");
                 
                 Platform.runLater(() -> {
                     boxTodaySchedule.getChildren().clear();
-                    if (todaySchedules.isEmpty()) {
+                    if (todaySchedules.length() == 0) {
                         lblNoSchedule.setVisible(true);
                         lblNoSchedule.setManaged(true);
                     } else {
                         lblNoSchedule.setVisible(false);
                         lblNoSchedule.setManaged(false);
-                        for (java.util.Map<String,Object> s : todaySchedules) {
-                            String subject = (String) s.getOrDefault("subject", "Unnamed");
-                            String time = s.get("startTime") + " - " + s.get("endTime");
-                            String room = (String) s.getOrDefault("room", "");
+                        for (int i = 0; i < todaySchedules.length(); i++) {
+                            org.json.JSONObject s = todaySchedules.getJSONObject(i);
+                            String subject = s.optString("subject", "Unnamed");
+                            String time = s.optString("startTime", "") + " - " + s.optString("endTime", "");
+                            String room = s.optString("room", "");
                             addScheduleItem(subject, time, room);
                         }
                     }

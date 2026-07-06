@@ -1,15 +1,16 @@
 package controller.widgets;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import protocol.RequestType;
 
 public class TodayScheduleWidgetController {
 
@@ -23,35 +24,22 @@ public class TodayScheduleWidgetController {
 
         new Thread(() -> {
             try {
-                LocalDate today = LocalDate.now();
-                List<Map<String, Object>> schedules = database.ScheduleRepository.getInstance().findLecturerSchedulesByDate(lecturerName, today);
-                com.mongodb.client.MongoCollection<org.bson.Document> enrollmentsCol = database.DatabaseHelper.getInstance().getEnrollmentsCollection();
+                protocol.Response res = ServerApi.send(RequestType.GET_LECTURER_TODAY_SCHEDULE,
+                        java.util.Map.of("lecturerName", lecturerName));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
 
                 final java.util.List<java.util.Map<String,String>> scheduleItemsData = new java.util.ArrayList<>();
+                org.json.JSONArray items = ServerApi.getArray(res, "items");
 
-                for (Map<String, Object> sch : schedules) {
-                    String subject = (String) sch.get("subject");
-                    String room = (String) sch.get("room");
-                    String className = (String) sch.get("className");
-                    
-                    String periods = (String) sch.get("periods");
-                    String time = "N/A";
-                    if (periods != null) {
-                        try {
-                            String[] parts = periods.split(",");
-                            int startP = Integer.parseInt(parts[0].trim());
-                            int endP = Integer.parseInt(parts[parts.length-1].trim());
-                            time = getPeriodTime(startP, true) + " - " + getPeriodTime(endP, false);
-                        } catch (Exception e) {}
-                    }
-
-                    long studentCount = enrollmentsCol.countDocuments(com.mongodb.client.model.Filters.eq("subject_id", className));
-
+                for (int i = 0; i < items.length(); i++) {
+                    org.json.JSONObject sch = items.getJSONObject(i);
                     Map<String,String> item = new java.util.HashMap<>();
-                    item.put("subject", subject);
-                    item.put("time", time);
-                    item.put("room", room);
-                    item.put("students", studentCount + " SV");
+                    item.put("subject", sch.optString("subject", ""));
+                    item.put("time", sch.optString("time", "N/A"));
+                    item.put("room", sch.optString("room", ""));
+                    item.put("students", sch.optString("students", "0 SV"));
                     scheduleItemsData.add(item);
                 }
 
@@ -70,13 +58,6 @@ public class TodayScheduleWidgetController {
                 e.printStackTrace();
             }
         }).start();
-    }
-
-    private String getPeriodTime(int period, boolean isStart) {
-        String[] startTimes = {"07:30", "08:20", "09:10", "10:00", "10:50", "13:00", "13:50", "14:40", "15:40", "16:30"};
-        String[] endTimes = {"08:20", "09:10", "10:00", "10:50", "11:40", "13:50", "14:40", "15:30", "16:30", "17:20"};
-        if (period < 1 || period > 10) return "00:00";
-        return isStart ? startTimes[period - 1] : endTimes[period - 1];
     }
 
     private void addScheduleItem(String subject, String time, String room, String students) {

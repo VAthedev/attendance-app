@@ -1,5 +1,6 @@
 package controller.student;
 
+import client.network.ServerApi;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
@@ -19,6 +20,7 @@ import service.GPSVerifyService;
 import service.GPSVerifyService.Coordinates;
 import service.WiFiVerifyService;
 import service.WiFiVerifyService.WiFiInfo;
+import protocol.RequestType;
 
 public class AttendanceGPSController implements Initializable {
 
@@ -120,81 +122,65 @@ public class AttendanceGPSController implements Initializable {
     @FXML
     private void checkSession() {
         new Thread(() -> {
-            String sid = StudentDashboardController.currentStudentId;
-            long nowMillis = System.currentTimeMillis();
-
-            java.util.List<String> enrolledClassCodes = new java.util.ArrayList<>();
-            com.mongodb.client.MongoCollection<org.bson.Document> enrollmentsCol = database.DatabaseHelper.getInstance().getEnrollmentsCollection();
-            for (org.bson.Document doc : enrollmentsCol.find(com.mongodb.client.model.Filters.eq("student_id", sid))) {
-                String cc = doc.getString("class_code");
-                if (cc != null) enrolledClassCodes.add(cc);
-            }
-
-            org.bson.Document activeSession = null;
-            if (!enrolledClassCodes.isEmpty()) {
-                com.mongodb.client.MongoCollection<org.bson.Document> sessionsCol = database.DatabaseHelper.getInstance().getSessionsCollection();
-                for (org.bson.Document s : sessionsCol.find(com.mongodb.client.model.Filters.and(
-                        com.mongodb.client.model.Filters.eq("status", "OPEN"),
-                        com.mongodb.client.model.Filters.in("class_name", enrolledClassCodes)
-                ))) {
-                    Long endTime = s.getLong("end_time");
-                    if (endTime != null && endTime > nowMillis) {
-                        activeSession = s;
-                        break;
-                    }
+            try {
+                String sid = StudentDashboardController.currentStudentId;
+                protocol.Response res = ServerApi.send(RequestType.GET_ACTIVE_SESSION_FOR_STUDENT,
+                        java.util.Map.of("studentId", sid));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
                 }
-            }
+                String sessionRaw = res.getDataValue("session");
+                final org.json.JSONObject session = sessionRaw == null || sessionRaw.isBlank()
+                        ? null
+                        : new org.json.JSONObject(sessionRaw);
 
-            final org.bson.Document finalSession = activeSession;
+                javafx.application.Platform.runLater(() -> {
+                    if (session != null) {
+                        currentSessionId = session.optString("id", "");
 
-            javafx.application.Platform.runLater(() -> {
-                if (finalSession != null) {
-                    currentSessionId = finalSession.getString("_id");
-                    if (currentSessionId == null && finalSession.getObjectId("_id") != null) {
-                        currentSessionId = finalSession.getObjectId("_id").toHexString();
+                        boolean gpsEnabled = session.optBoolean("gpsEnabled", false);
+                        boolean wifiEnabled = session.optBoolean("wifiEnabled", false);
+
+                        try {
+                            String latStr = session.optString("gpsLat", "");
+                            String lngStr = session.optString("gpsLng", "");
+                            if (latStr != null && !latStr.isEmpty()) classLat = Double.parseDouble(latStr);
+                            if (lngStr != null && !lngStr.isEmpty()) classLng = Double.parseDouble(lngStr);
+                        } catch (Exception e) {}
+
+                        String bssid = session.optString("wifiBssid", "");
+                        if (bssid != null && !bssid.isEmpty()) classBSSID = bssid;
+
+                        long sTime = session.optLong("startTime", 0L);
+                        long eTime = session.optLong("endTime", 0L);
+
+                        sessionStartTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(sTime), java.time.ZoneId.systemDefault());
+                        sessionEndTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(eTime), java.time.ZoneId.systemDefault());
+
+                        String subject = session.optString("subject", "");
+                        String room = session.optString("room", "N/A");
+                        if (room == null || room.isEmpty()) room = "N/A";
+
+                        String classNameStr = session.optString("className", "");
+                        String info = classNameStr + " - P." + room;
+
+                        showSession(subject, info, gpsEnabled, wifiEnabled, sessionStartTime, sessionEndTime);
+                    } else {
+                        boxSessionInfo.setVisible(false);
+                        boxSessionInfo.setManaged(false);
+                        boxNoSession.setVisible(true);
+                        boxNoSession.setManaged(true);
                     }
-
-                    boolean gpsEnabled = false;
-                    Object gpsObj = finalSession.get("gps_enabled");
-                    if (gpsObj instanceof Boolean) gpsEnabled = (Boolean) gpsObj;
-                    else if (gpsObj instanceof String) gpsEnabled = Boolean.parseBoolean((String) gpsObj);
-
-                    boolean wifiEnabled = false;
-                    Object wifiObj = finalSession.get("wifi_enabled");
-                    if (wifiObj instanceof Boolean) wifiEnabled = (Boolean) wifiObj;
-                    else if (wifiObj instanceof String) wifiEnabled = Boolean.parseBoolean((String) wifiObj);
-                    
-                    try {
-                        String latStr = finalSession.getString("gps_lat");
-                        String lngStr = finalSession.getString("gps_lng");
-                        if (latStr != null && !latStr.isEmpty()) classLat = Double.parseDouble(latStr);
-                        if (lngStr != null && !lngStr.isEmpty()) classLng = Double.parseDouble(lngStr);
-                    } catch (Exception e) {}
-
-                    String bssid = finalSession.getString("wifi_bssid");
-                    if (bssid != null && !bssid.isEmpty()) classBSSID = bssid;
-
-                    long sTime = finalSession.getLong("start_time");
-                    long eTime = finalSession.getLong("end_time");
-                    
-                    sessionStartTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(sTime), java.time.ZoneId.systemDefault());
-                    sessionEndTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(eTime), java.time.ZoneId.systemDefault());
-
-                    String subject = finalSession.getString("subject");
-                    String room = finalSession.getString("room");
-                    if (room == null || room.isEmpty()) room = "N/A";
-                    
-                    String classNameStr = finalSession.getString("class_name");
-                    String info = classNameStr + " - P." + room;
-
-                    showSession(subject, info, gpsEnabled, wifiEnabled, sessionStartTime, sessionEndTime);
-                } else {
+                });
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                javafx.application.Platform.runLater(() -> {
                     boxSessionInfo.setVisible(false);
                     boxSessionInfo.setManaged(false);
                     boxNoSession.setVisible(true);
                     boxNoSession.setManaged(true);
-                }
-            });
+                });
+            }
         }).start();
     }
 

@@ -1,5 +1,6 @@
 package controller.student;
 
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -10,7 +11,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import model.Attendance;
-import service.AttendanceService;
+import protocol.RequestType;
 
 import java.net.URL;
 import java.util.*;
@@ -80,17 +81,28 @@ public class AttendanceStatisticController implements Initializable {
     @FXML
     private Label lblRecommendation;
 
-    private AttendanceService attendanceService;
     private List<SubjectStatisticRecord> statisticRecords = new ArrayList<>();
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        attendanceService = new AttendanceService();
         barChart.setAnimated(false);
+        configurePercentAxes();
 
         setupSemesterComboBox();
         setupTableColumns();
         loadStatistics();
+    }
+
+    private void configurePercentAxes() {
+        yAxis.setAutoRanging(false);
+        yAxis.setLowerBound(0);
+        yAxis.setUpperBound(100);
+        yAxis.setTickUnit(10);
+
+        percentAxis.setAutoRanging(false);
+        percentAxis.setLowerBound(0);
+        percentAxis.setUpperBound(100);
+        percentAxis.setTickUnit(10);
     }
 
     private void setupSemesterComboBox() {
@@ -171,7 +183,12 @@ public class AttendanceStatisticController implements Initializable {
                 if (studentId == null) {
                     throw new Exception("Không xác định được sinh viên đăng nhập.");
                 }
-                List<model.Attendance> rawRecords = attendanceService.getAttendanceHistory(studentId);
+                protocol.Response res = ServerApi.send(RequestType.GET_ATTENDANCE_STATS,
+                        java.util.Map.of("studentId", studentId));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
+                List<model.Attendance> rawRecords = parseAttendanceRecords(ServerApi.getArray(res, "records"));
 
                 // Group by Subject
                 Map<String, int[]> statsMap = new HashMap<>(); // [total, present, absent, late]
@@ -184,11 +201,11 @@ public class AttendanceStatisticController implements Initializable {
                     String subj = att.getSubjectName() != null ? att.getSubjectName() : "Unknown";
                     int[] counts = statsMap.getOrDefault(subj, new int[]{0, 0, 0, 0});
                     counts[0]++; // total
-                    
+
                     if ("PRESENT".equals(st)) counts[1]++;
                     else if ("ABSENT".equals(st) || "UNEXCUSED_ABSENT".equals(st)) counts[2]++;
                     else if ("LATE".equals(st)) counts[3]++;
-                    
+
                     statsMap.put(subj, counts);
                 }
 
@@ -230,9 +247,40 @@ public class AttendanceStatisticController implements Initializable {
         }).start();
     }
 
+    private List<model.Attendance> parseAttendanceRecords(org.json.JSONArray arr) {
+        List<model.Attendance> records = new ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            org.json.JSONObject obj = arr.getJSONObject(i);
+            model.Attendance attendance = new model.Attendance();
+            String date = obj.optString("date", "");
+            if (!date.isBlank()) {
+                try {
+                    attendance.setAttendanceDate(java.time.LocalDate.parse(date));
+                } catch (Exception ignored) {}
+            }
+            attendance.setSubjectName(obj.optString("subjectName", "Unknown"));
+            attendance.setTimeString(obj.optString("timeString", ""));
+            attendance.setMethod(obj.optString("method", ""));
+            attendance.setStatus(obj.optString("status", ""));
+            attendance.setRoom(obj.optString("room", ""));
+            attendance.setLocation(obj.optString("location", ""));
+            attendance.setTimestamp(obj.optLong("timestamp", 0L));
+            records.add(attendance);
+        }
+        return records;
+    }
+
     private void updateOverview() {
-        if (statisticRecords.isEmpty())
+        if (statisticRecords.isEmpty()) {
+            lblTotalSubjects.setText("0");
+            lblAvgAttendance.setText("0%");
+            lblTotalClasses.setText("0");
+            lblTotalPresent.setText("0");
+            lblTotalAbsent.setText("0");
+            lblOverallPercent.setText("0%");
+            overallProgress.setProgress(0);
             return;
+        }
 
         int totalSubjects = statisticRecords.size();
         int totalClasses = statisticRecords.stream().mapToInt(SubjectStatisticRecord::getTotalClasses).sum();
@@ -291,23 +339,27 @@ public class AttendanceStatisticController implements Initializable {
         series.setName("Tỷ lệ chuyên cần theo tuần");
 
         Map<String, int[]> weeklyStats = new TreeMap<>(); // Map "yyyy-Www" -> [total, present]
-        
+
         for (model.Attendance att : rawRecords) {
+            if ("EXCUSED_ABSENT".equals(att.getStatus())) {
+                continue;
+            }
+
+            java.time.LocalDate date = att.getAttendanceDate();
             long timestamp = att.getTimestamp();
-            if (timestamp > 0) {
-                java.time.LocalDate date = java.time.Instant.ofEpochMilli(timestamp)
+            if (date == null && timestamp > 0) {
+                date = java.time.Instant.ofEpochMilli(timestamp)
                         .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+            }
+            if (date != null) {
                 int week = date.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
                 int year = date.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR);
                 String weekKey = year + "-W" + String.format("%02d", week);
-                
-                if ("EXCUSED_ABSENT".equals(att.getStatus())) {
-                    continue;
-                }
+
                 int[] stats = weeklyStats.getOrDefault(weekKey, new int[]{0, 0});
-                stats[0]++; // total
+                stats[0]++;
                 if ("PRESENT".equals(att.getStatus())) {
-                    stats[1]++; // present
+                    stats[1]++;
                 }
                 weeklyStats.put(weekKey, stats);
             }
@@ -331,6 +383,13 @@ public class AttendanceStatisticController implements Initializable {
 
     private void updateRecommendation() {
         int totalRecords = statisticRecords.size();
+        if (totalRecords == 0) {
+            lblRecommendation.setText("Chua co du lieu diem danh de danh gia chuyen can.");
+            boxRecommendation.setVisible(true);
+            boxRecommendation.setManaged(true);
+            return;
+        }
+
         long poorRecords = statisticRecords.stream()
                 .filter(r -> r.getTotalClasses() > 0 &&
                         (double) r.getPresent() / r.getTotalClasses() < 0.6)

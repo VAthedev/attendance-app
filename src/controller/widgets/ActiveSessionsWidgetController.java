@@ -1,9 +1,9 @@
 package controller.widgets;
 
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -13,6 +13,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import protocol.RequestType;
 
 public class ActiveSessionsWidgetController {
 
@@ -24,41 +25,43 @@ public class ActiveSessionsWidgetController {
 
         new Thread(() -> {
             try {
-                com.mongodb.client.MongoCollection<org.bson.Document> enrollmentsCol = database.DatabaseHelper.getInstance().getEnrollmentsCollection();
-                com.mongodb.client.MongoCollection<org.bson.Document> attendanceCol = database.DatabaseHelper.getInstance().getAttendanceCollection();
+                protocol.Response res = ServerApi.send(RequestType.GET_ACTIVE_SESSIONS,
+                        java.util.Map.of("lecturerId", lecturerId));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
 
-                List<org.bson.Document> activeSessions = database.SessionRepository.getInstance().findActiveSessions(lecturerId);
+                org.json.JSONArray activeSessions = ServerApi.getArray(res, "sessions");
                 final List<Map<String,Object>> sessionItemsData = new java.util.ArrayList<>();
-                
-                for (org.bson.Document session : activeSessions) {
-                    String subject = session.getString("subject");
-                    long startMillis = session.getLong("start_time");
-                    String openTime = java.time.LocalTime.ofInstant(java.time.Instant.ofEpochMilli(startMillis), java.time.ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"));
-                    String sessionId = session.getString("_id");
-                    if (sessionId == null && session.getObjectId("_id") != null) sessionId = session.getObjectId("_id").toHexString();
 
-                    long checkedInCount = attendanceCol.countDocuments(com.mongodb.client.model.Filters.eq("session_id", sessionId));
-                    
-                    String className = session.getString("class_name");
-                    long totalCount = enrollmentsCol.countDocuments(com.mongodb.client.model.Filters.eq("subject_id", className));
-
+                for (int i = 0; i < activeSessions.length(); i++) {
+                    org.json.JSONObject session = activeSessions.getJSONObject(i);
                     Map<String,Object> item = new java.util.HashMap<>();
-                    item.put("subject", subject);
-                    item.put("status", "Đang mở");
-                    item.put("openTime", openTime);
-                    item.put("checkedIn", (int)checkedInCount);
-                    item.put("total", (int)totalCount);
+                    item.put("sessionId", session.optString("sessionId", ""));
+                    item.put("subject", session.optString("subject", ""));
+                    item.put("status", session.optString("status", "Dang mo"));
+                    item.put("openTime", session.optString("openTime", "N/A"));
+                    item.put("checkedIn", session.optInt("checkedIn", 0));
+                    item.put("total", session.optInt("total", 0));
                     sessionItemsData.add(item);
                 }
 
                 Platform.runLater(() -> {
                     boxActiveSessions.getChildren().clear();
                     if (sessionItemsData.isEmpty()) {
-                        lblNoSession.setVisible(true); lblNoSession.setManaged(true);
+                        lblNoSession.setVisible(true);
+                        lblNoSession.setManaged(true);
                     } else {
-                        lblNoSession.setVisible(false); lblNoSession.setManaged(false);
+                        lblNoSession.setVisible(false);
+                        lblNoSession.setManaged(false);
                         for (Map<String,Object> m : sessionItemsData) {
-                            addActiveSession((String)m.get("subject"), (String)m.get("status"), (String)m.get("openTime"), (int)m.get("checkedIn"), (int)m.get("total"));
+                            addActiveSession(
+                                    (String)m.get("sessionId"),
+                                    (String)m.get("subject"),
+                                    (String)m.get("status"),
+                                    (String)m.get("openTime"),
+                                    (int)m.get("checkedIn"),
+                                    (int)m.get("total"));
                         }
                     }
                 });
@@ -68,8 +71,8 @@ public class ActiveSessionsWidgetController {
         }).start();
     }
 
-    private void addActiveSession(String subject, String status, String openTime,
-                                   int checkedIn, int total) {
+    private void addActiveSession(String sessionId, String subject, String status, String openTime,
+                                  int checkedIn, int total) {
         VBox card = new VBox(8);
         card.setStyle("-fx-background-color:#f0fdf4;-fx-background-radius:8;" +
                       "-fx-border-color:#86efac;-fx-border-radius:8;-fx-border-width:1;" +
@@ -78,11 +81,13 @@ public class ActiveSessionsWidgetController {
         Label lblSubject = new Label(subject);
         lblSubject.setStyle("-fx-font-weight:bold;-fx-font-size:13px;-fx-text-fill:#14532d;");
         HBox.setHgrow(lblSubject, Priority.ALWAYS);
-        Label lblStatus = new Label("● " + status);
+        Label lblStatus = new Label("* " + status);
         lblStatus.setStyle("-fx-text-fill:#16a34a;-fx-font-size:12px;-fx-font-weight:bold;");
         top.getChildren().addAll(lblSubject, lblStatus);
-        Label lblInfo = new Label("Mở lúc " + openTime + "  •  " + checkedIn + "/" + total + " SV đã điểm danh");
+
+        Label lblInfo = new Label("Mo luc " + openTime + "  -  " + checkedIn + "/" + total + " SV da diem danh");
         lblInfo.setStyle("-fx-font-size:12px;-fx-text-fill:#166534;");
+
         double pct = total > 0 ? (double) checkedIn / total : 0;
         StackPane progressBg = new StackPane();
         progressBg.setStyle("-fx-background-color:#dcfce7;-fx-background-radius:4;-fx-pref-height:6;");
@@ -91,14 +96,30 @@ public class ActiveSessionsWidgetController {
         progressFill.setPrefWidth(240 * pct);
         StackPane.setAlignment(progressFill, javafx.geometry.Pos.CENTER_LEFT);
         progressBg.getChildren().add(progressFill);
-        Button btnClose = new Button("Đóng phiên");
+
+        Button btnClose = new Button("Dong phien");
         btnClose.setStyle("-fx-background-color:#dc2626;-fx-text-fill:white;" +
                           "-fx-background-radius:6;-fx-font-size:12px;-fx-cursor:hand;");
-        btnClose.setOnAction(e -> {
-            boxActiveSessions.getChildren().remove(card);
-            lblNoSession.setVisible(true);
-        });
+        btnClose.setOnAction(e -> closeSession(sessionId, card));
+
         card.getChildren().addAll(top, lblInfo, progressBg, btnClose);
         boxActiveSessions.getChildren().add(card);
+    }
+
+    private void closeSession(String sessionId, VBox card) {
+        if (sessionId == null || sessionId.isBlank()) return;
+
+        protocol.Request req = new protocol.Request(RequestType.CLOSE_SESSION);
+        req.putPayload("session_id", sessionId);
+        client.network.SocketClient.getInstance().sendAsync(req, res -> {
+            if (res.isOk()) {
+                boxActiveSessions.getChildren().remove(card);
+                boolean empty = boxActiveSessions.getChildren().isEmpty();
+                lblNoSession.setVisible(empty);
+                lblNoSession.setManaged(empty);
+            } else {
+                System.err.println("Loi dong phien: " + res.getMessage());
+            }
+        });
     }
 }

@@ -1,16 +1,18 @@
 package controller.lecturer;
 
-import database.AttendanceRepository;
-import database.EnrollmentRepository;
-import database.SessionRepository;
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import org.bson.Document;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import protocol.RequestType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,10 +29,10 @@ public class LecturerAttendanceListController {
 
     @FXML
     public void initialize() {
-        cmbStatusFilter.setItems(FXCollections.observableArrayList("Tất cả", "Đang mở", "Đã đóng"));
-        cmbStatusFilter.setValue("Tất cả");
+        cmbStatusFilter.setItems(FXCollections.observableArrayList("Tat ca", "Dang mo", "Da dong"));
+        cmbStatusFilter.setValue("Tat ca");
         cmbStatusFilter.setOnAction(e -> filterAndRender());
-        
+
         txtSearch.textProperty().addListener((obs, oldVal, newVal) -> filterAndRender());
     }
 
@@ -41,49 +43,32 @@ public class LecturerAttendanceListController {
 
     private void loadData() {
         listContainer.getChildren().clear();
-        Label loadingLabel = new Label("Đang tải dữ liệu...");
+        Label loadingLabel = new Label("Dang tai du lieu...");
         loadingLabel.setStyle("-fx-text-fill: #666; -fx-font-style: italic;");
         listContainer.getChildren().add(loadingLabel);
 
         new Thread(() -> {
             try {
-                SessionRepository sessionRepo = SessionRepository.getInstance();
-                AttendanceRepository attRepo = new AttendanceRepository();
-                EnrollmentRepository enrRepo = EnrollmentRepository.getInstance();
+                protocol.Response res = ServerApi.send(RequestType.GET_LECTURER_ATTENDANCE_LIST,
+                        java.util.Map.of("lecturerId", lecturerId));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
 
-                List<Document> sessions = sessionRepo.findAllSessionsByLecturerId(lecturerId);
+                org.json.JSONArray sessions = ServerApi.getArray(res, "sessions");
                 List<SessionData> dataList = new ArrayList<>();
-
-                for (Document doc : sessions) {
+                for (int i = 0; i < sessions.length(); i++) {
+                    org.json.JSONObject obj = sessions.getJSONObject(i);
                     SessionData data = new SessionData();
-                    data.id = doc.get("_id").toString();
-                    data.className = doc.getString("class_name") != null ? doc.getString("class_name") : doc.getString("class_code");
-                    data.subject = doc.getString("subject") != null ? doc.getString("subject") : doc.getString("subject_code");
-                    
-                    Object startObj = doc.get("start_time");
-                    if (startObj instanceof Number) {
-                        long startMillis = ((Number) startObj).longValue();
-                        java.time.LocalDateTime startLdt = java.time.Instant.ofEpochMilli(startMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
-                        data.date = startLdt.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                        data.startTime = startLdt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-                    } else {
-                        data.date = doc.getString("date") != null ? doc.getString("date") : "N/A";
-                        data.startTime = startObj != null ? startObj.toString() : "N/A";
-                    }
-
-                    Object endObj = doc.get("end_time");
-                    if (endObj instanceof Number) {
-                        long endMillis = ((Number) endObj).longValue();
-                        java.time.LocalDateTime endLdt = java.time.Instant.ofEpochMilli(endMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
-                        data.endTime = endLdt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-                    } else {
-                        data.endTime = endObj != null ? endObj.toString() : "N/A";
-                    }
-                    data.status = doc.getString("status");
-
-                    data.presentCount = attRepo.countBySessionId(data.id);
-                    data.totalStudents = enrRepo.countStudentsByClassCode(data.className);
-                    
+                    data.id = obj.optString("id", "");
+                    data.className = obj.optString("className", "");
+                    data.subject = obj.optString("subject", "");
+                    data.date = obj.optString("date", "N/A");
+                    data.startTime = obj.optString("startTime", "N/A");
+                    data.endTime = obj.optString("endTime", "N/A");
+                    data.status = obj.optString("status", "");
+                    data.presentCount = obj.optLong("presentCount", 0);
+                    data.totalStudents = obj.optLong("totalStudents", 0);
                     dataList.add(data);
                 }
 
@@ -91,12 +76,11 @@ public class LecturerAttendanceListController {
                     this.allSessions = dataList;
                     filterAndRender();
                 });
-
             } catch (Exception e) {
                 e.printStackTrace();
                 Platform.runLater(() -> {
                     listContainer.getChildren().clear();
-                    listContainer.getChildren().add(new Label("Lỗi khi tải dữ liệu: " + e.getMessage()));
+                    listContainer.getChildren().add(new Label("Loi khi tai du lieu: " + e.getMessage()));
                 });
             }
         }).start();
@@ -109,22 +93,22 @@ public class LecturerAttendanceListController {
 
     private void filterAndRender() {
         listContainer.getChildren().clear();
-        
+
         String filterStatus = cmbStatusFilter.getValue();
-        String keyword = txtSearch.getText().toLowerCase();
+        String keyword = txtSearch.getText() != null ? txtSearch.getText().toLowerCase() : "";
 
         List<SessionData> filtered = allSessions.stream().filter(s -> {
-            boolean matchStatus = "Tất cả".equals(filterStatus) ||
-                                  ("Đang mở".equals(filterStatus) && "OPEN".equals(s.status)) ||
-                                  ("Đã đóng".equals(filterStatus) && "CLOSED".equals(s.status));
-            boolean matchKeyword = keyword.isEmpty() || 
-                                   (s.className != null && s.className.toLowerCase().contains(keyword)) ||
-                                   (s.subject != null && s.subject.toLowerCase().contains(keyword));
+            boolean matchStatus = "Tat ca".equals(filterStatus) ||
+                    ("Dang mo".equals(filterStatus) && "OPEN".equals(s.status)) ||
+                    ("Da dong".equals(filterStatus) && "CLOSED".equals(s.status));
+            boolean matchKeyword = keyword.isEmpty() ||
+                    (s.className != null && s.className.toLowerCase().contains(keyword)) ||
+                    (s.subject != null && s.subject.toLowerCase().contains(keyword));
             return matchStatus && matchKeyword;
         }).collect(Collectors.toList());
 
         if (filtered.isEmpty()) {
-            Label noDataLabel = new Label("Không tìm thấy phiên điểm danh nào.");
+            Label noDataLabel = new Label("Khong tim thay phien diem danh nao.");
             noDataLabel.setStyle("-fx-text-fill: #999; -fx-padding: 20;");
             listContainer.getChildren().add(noDataLabel);
             return;
@@ -138,48 +122,44 @@ public class LecturerAttendanceListController {
     private HBox createCard(SessionData s) {
         HBox card = new HBox(15);
         card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-padding: 15; " +
-                      "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);");
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 2);");
         card.setAlignment(Pos.CENTER_LEFT);
 
-        // Icon/Status indicator
         VBox statusBox = new VBox();
         statusBox.setAlignment(Pos.CENTER);
         statusBox.setPrefWidth(60);
-        Label icon = new Label("OPEN".equals(s.status) ? "🟢" : "⚫");
-        icon.setStyle("-fx-font-size: 24px;");
+        Label icon = new Label("OPEN".equals(s.status) ? "OPEN" : "DONE");
+        icon.setStyle("-fx-font-size: 12px; -fx-font-weight: bold;");
         statusBox.getChildren().add(icon);
 
-        // Info
         VBox infoBox = new VBox(5);
         Label lblClass = new Label(s.className + " - " + s.subject);
         lblClass.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333;");
-        Label lblTime = new Label("Ngày: " + s.date + " | Từ " + s.startTime + " đến " + s.endTime);
+        Label lblTime = new Label("Ngay: " + s.date + " | Tu " + s.startTime + " den " + s.endTime);
         lblTime.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
         infoBox.getChildren().addAll(lblClass, lblTime);
         HBox.setHgrow(infoBox, Priority.ALWAYS);
 
-        // Progress
         VBox progressBox = new VBox(5);
         progressBox.setAlignment(Pos.CENTER_RIGHT);
         progressBox.setPrefWidth(200);
-        
-        long total = Math.max(1, s.totalStudents); // Avoid div by zero
+
+        long total = Math.max(1, s.totalStudents);
         double progress = (double) s.presentCount / total;
-        
-        Label lblStats = new Label(s.presentCount + " / " + s.totalStudents + " Sinh viên");
+
+        Label lblStats = new Label(s.presentCount + " / " + s.totalStudents + " Sinh vien");
         lblStats.setStyle("-fx-font-weight: bold; -fx-text-fill: #1a237e;");
-        
+
         ProgressBar pBar = new ProgressBar(progress);
         pBar.setPrefWidth(180);
         pBar.setStyle("-fx-accent: " + (progress > 0.8 ? "#4caf50" : (progress > 0.5 ? "#ff9800" : "#f44336")) + ";");
-        
+
         progressBox.getChildren().addAll(lblStats, pBar);
 
-        // Status Badge
-        Label lblStatus = new Label("OPEN".equals(s.status) ? "Đang mở" : "Đã đóng");
+        Label lblStatus = new Label("OPEN".equals(s.status) ? "Dang mo" : "Da dong");
         lblStatus.setStyle("-fx-padding: 5 10; -fx-background-radius: 15; -fx-font-size: 11px; -fx-font-weight: bold; " +
-                           ("OPEN".equals(s.status) ? "-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32;" 
-                                                    : "-fx-background-color: #f5f5f5; -fx-text-fill: #757575;"));
+                ("OPEN".equals(s.status) ? "-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32;"
+                        : "-fx-background-color: #f5f5f5; -fx-text-fill: #757575;"));
 
         card.getChildren().addAll(statusBox, infoBox, progressBox, lblStatus);
         return card;

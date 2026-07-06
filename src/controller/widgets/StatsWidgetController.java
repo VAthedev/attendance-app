@@ -1,12 +1,10 @@
 package controller.widgets;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import protocol.RequestType;
 
 public class StatsWidgetController {
 
@@ -22,24 +20,17 @@ public class StatsWidgetController {
 
         new Thread(() -> {
             try {
-                LocalDate today = LocalDate.now();
-                List<Map<String, Object>> schedules = database.ScheduleRepository.getInstance().findLecturerSchedulesByDate(lecturerName, today);
-                com.mongodb.client.MongoCollection<org.bson.Document> enrollmentsCol = database.DatabaseHelper.getInstance().getEnrollmentsCollection();
-
-                int totalStudentsAll = 0;
-                for (Map<String, Object> sch : schedules) {
-                    String className = (String) sch.get("className");
-                    long studentCount = enrollmentsCol.countDocuments(com.mongodb.client.model.Filters.eq("subject_id", className));
-                    totalStudentsAll += studentCount;
+                protocol.Response res = ServerApi.send(RequestType.GET_LECTURER_DASHBOARD_STATS,
+                        java.util.Map.of("lecturerName", lecturerName));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
                 }
-                
-                final int finalTotalStudentsAll = totalStudentsAll;
 
                 Platform.runLater(() -> {
-                    lblTotalSubjects.setText(String.valueOf(schedules.size()));
-                    lblTotalStudents.setText(String.valueOf(finalTotalStudentsAll));
-                    lblAvgAttendance.setText("--%");
-                    lblAbsentWarning.setText("0"); // Logic cảnh báo vắng đang pending từ bản gốc
+                    lblTotalSubjects.setText(res.getDataValue("totalSubjects"));
+                    lblTotalStudents.setText(res.getDataValue("totalStudents"));
+                    lblAvgAttendance.setText(res.getDataValue("avgAttendance"));
+                    lblAbsentWarning.setText(res.getDataValue("absentWarning"));
                 });
             } catch (Exception e) {
                 e.printStackTrace();

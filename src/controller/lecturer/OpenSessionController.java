@@ -1,5 +1,6 @@
 package controller.lecturer;
 
+import client.network.ServerApi;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
@@ -7,6 +8,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import protocol.RequestType;
 import javafx.util.Duration;
 
 import java.net.URL;
@@ -62,11 +64,15 @@ public class OpenSessionController implements Initializable {
         this.lecturerName = lecturerName;
         lblLecturerName.setText(lecturerName);
         
-        // Load classes from DB
+        // Load classes through server
         new Thread(() -> {
             try {
-                database.ScheduleRepository scheduleRepo = database.ScheduleRepository.getInstance();
-                List<String> classes = scheduleRepo.findUniqueClassesByLecturerName(lecturerName);
+                protocol.Response res = ServerApi.send(RequestType.GET_LECTURER_CLASSES,
+                        java.util.Map.of("lecturerName", lecturerName));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
+                List<String> classes = ServerApi.getStringList(res, "classes");
                 
                 javafx.application.Platform.runLater(() -> {
                     cbClasses.getItems().clear();

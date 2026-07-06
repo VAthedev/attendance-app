@@ -1,5 +1,6 @@
 package controller.student;
 
+import client.network.ServerApi;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -14,9 +15,10 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import model.Notification;
-import service.NotificationService;
+import protocol.RequestType;
 
 import java.net.URL;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -28,12 +30,10 @@ public class NotificationController implements Initializable {
     @FXML private VBox boxEmpty;
     @FXML private Button btnMarkAllRead;
 
-    private NotificationService notificationService;
     private String currentStudentId;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        notificationService = new NotificationService();
         currentStudentId = StudentDashboardController.currentStudentId;
 
         if (currentStudentId != null) {
@@ -48,7 +48,12 @@ public class NotificationController implements Initializable {
 
         new Thread(() -> {
             try {
-                List<Notification> notifications = notificationService.getNotificationsForStudent(currentStudentId);
+                protocol.Response res = ServerApi.send(RequestType.GET_NOTIFICATIONS,
+                        java.util.Map.of("studentId", currentStudentId));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
+                List<Notification> notifications = parseNotifications(ServerApi.getArray(res, "notifications"));
 
                 Platform.runLater(() -> {
                     showLoading(false);
@@ -145,10 +150,36 @@ public class NotificationController implements Initializable {
         btnMarkAllRead.setDisable(!hasUnread);
     }
 
+    private List<Notification> parseNotifications(org.json.JSONArray arr) {
+        java.util.ArrayList<Notification> notifications = new java.util.ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            org.json.JSONObject obj = arr.getJSONObject(i);
+            Notification notif = new Notification();
+            notif.setId(obj.optString("id", null));
+            notif.setStudentId(obj.optString("studentId", ""));
+            notif.setTitle(obj.optString("title", ""));
+            notif.setMessage(obj.optString("message", ""));
+            notif.setType(obj.optString("type", "INFO"));
+            notif.setRead(obj.optBoolean("isRead", false));
+            String createdAt = obj.optString("createdAt", "");
+            if (!createdAt.isBlank()) {
+                try {
+                    notif.setCreatedAt(LocalDateTime.parse(createdAt));
+                } catch (Exception ignored) {}
+            }
+            notifications.add(notif);
+        }
+        return notifications;
+    }
+
     private void markAsRead(String id) {
         new Thread(() -> {
             try {
-                notificationService.markAsRead(id);
+                protocol.Response res = ServerApi.send(RequestType.MARK_NOTIFICATION_READ,
+                        java.util.Map.of("notificationId", id));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
                 Platform.runLater(this::loadNotifications);
             } catch (Exception e) {
                 Platform.runLater(() -> showError("Lỗi khi cập nhật trạng thái: " + e.getMessage()));
@@ -162,7 +193,11 @@ public class NotificationController implements Initializable {
         
         new Thread(() -> {
             try {
-                notificationService.markAllAsRead(currentStudentId);
+                protocol.Response res = ServerApi.send(RequestType.MARK_NOTIFICATION_READ,
+                        java.util.Map.of("studentId", currentStudentId, "all", "true"));
+                if (!res.isOk()) {
+                    throw new IllegalStateException(res.getMessage());
+                }
                 Platform.runLater(this::loadNotifications);
             } catch (Exception e) {
                 Platform.runLater(() -> showError("Lỗi khi cập nhật tất cả: " + e.getMessage()));
