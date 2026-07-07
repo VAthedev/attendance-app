@@ -223,8 +223,9 @@ public class ClientHandler implements Runnable {
             service.EmailService.getInstance().sendOTP(email, otp);
             System.out.println("[OTP Trace] 3. Đã gửi OTP thành công qua Email!");
         } catch (Exception e) {
+            otpStore.remove(email);
             System.err.println("[Handler] Lỗi gửi email: " + e.getMessage());
-            return Response.error("Không thể gửi email. Vui lòng thử lại.");
+            return Response.error("Không thể gửi email: " + userSafeError(e));
         }
 
         return Response.ok("OTP đã gửi đến " + email);
@@ -604,6 +605,9 @@ public class ClientHandler implements Runnable {
             java.util.List<org.bson.Document> enrollments = database.EnrollmentRepository.getInstance().findStudentsByClassCode(classCode);
             java.util.List<org.bson.Document> sessions = database.SessionRepository.getInstance().findSessionsByClassCode(classCode);
             java.util.Map<String, org.json.JSONObject> studentMap = new java.util.HashMap<>();
+            // FIX: chỉ mục đa định danh -> object, để khớp bản ghi điểm danh dù student_id
+            // được lưu dạng MSSV, user_id (id đăng nhập), username hay _id.
+            java.util.Map<String, org.json.JSONObject> identityIndex = new java.util.HashMap<>();
             for (org.bson.Document enrollment : enrollments) {
                 String studentId = enrollment.getString("student_id");
                 org.bson.Document studentDetails = enrollment.get("student_details", org.bson.Document.class);
@@ -614,15 +618,23 @@ public class ClientHandler implements Runnable {
                 obj.put("totalSessions", sessions.size());
                 obj.put("presentCount", 0);
                 obj.put("absentCount", 0);
-                studentMap.put(studentId, obj);
+                studentMap.put(safe(studentId), obj);
+                for (String key : new String[]{ safe(studentId),
+                        studentDetails != null ? safe(studentDetails.get("student_id")) : "",
+                        studentDetails != null ? safe(studentDetails.get("code")) : "",
+                        studentDetails != null ? safe(studentDetails.get("username")) : "",
+                        studentDetails != null ? safe(studentDetails.get("_id")) : "",
+                        studentDetails != null ? safe(studentDetails.get("id")) : "" }) {
+                    if (key != null && !key.isBlank()) identityIndex.putIfAbsent(key, obj);
+                }
             }
 
             database.AttendanceRepository attendanceRepository = new database.AttendanceRepository();
             for (org.bson.Document session : sessions) {
                 String sessionId = documentId(session);
                 for (org.bson.Document attendance : attendanceRepository.findBySessionId(sessionId)) {
-                    String studentId = attendance.getString("student_id");
-                    org.json.JSONObject data = studentMap.get(studentId);
+                    org.json.JSONObject data = identityIndex.get(safe(attendance.get("student_id")));
+                    if (data == null) data = identityIndex.get(safe(attendance.get("user_id")));
                     if (data != null) {
                         if ("PRESENT".equals(attendance.getString("status"))) {
                             data.put("presentCount", data.optInt("presentCount") + 1);
@@ -1272,6 +1284,18 @@ public class ClientHandler implements Runnable {
 
     private String safe(Object value) {
         return value != null ? value.toString() : "";
+    }
+
+    private String userSafeError(Exception e) {
+        String message = e.getMessage();
+        if (message == null || message.isBlank()) {
+            message = e.getClass().getSimpleName();
+        }
+        message = message.replace('\n', ' ').replace('\r', ' ').trim();
+        if (message.length() > 180) {
+            message = message.substring(0, 177) + "...";
+        }
+        return message;
     }
 
     private void close() {

@@ -50,8 +50,10 @@ public class VirtualAssistant {
 
     private void init() {
         String apiKey = getApiKey();
-        if (apiKey == null || apiKey.isEmpty()) {
-            System.err.println("CẢNH BÁO: Chưa thiết lập GEMINI_API_KEY trong biến môi trường hoặc file .env.");
+        // Coi key rỗng HOẶC key giữ chỗ dạng "<YOUR_GEMINI_API_KEY_HERE>" là chưa cấu hình:
+        // để assistant = null, khi đó ask() trả về thông báo "Chatbot chưa được khởi tạo (thiếu API Key)".
+        if (apiKey == null || apiKey.isBlank() || apiKey.startsWith("<")) {
+            System.err.println("CẢNH BÁO: Chưa thiết lập GEMINI_API_KEY hợp lệ trong biến môi trường hoặc file .env.");
             return;
         }
 

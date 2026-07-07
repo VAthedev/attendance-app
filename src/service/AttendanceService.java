@@ -292,20 +292,30 @@ public class AttendanceService {
             String studentId = enr.getString("student_id");
             if (studentId == null) continue;
 
-            boolean attended = attendances.stream()
-                    .anyMatch(a -> studentId.equals(a.getString("student_id")));
+            // FIX: dùng tra cứu có ánh xạ đa định danh (khớp cả khi student_id lưu dạng
+            // id đăng nhập lẫn MSSV), thay cho so sánh chuỗi trực tiếp dễ bỏ sót.
+            boolean attended = attendanceRepository.findBySessionAndStudent(sessionId, studentId) != null;
 
             if (!attended) {
                 // BR-1: Ghi trạng thái UNEXCUSED_ABSENT (không phép) — duy nhất loại này tính vào %
+                // FIX: gán device_id riêng cho từng SV để KHÔNG đụng chỉ mục duy nhất
+                // (session_id, device_id) khi có nhiều SV vắng (nếu để trống sẽ cùng = null).
                 Document absentDoc = new Document()
                         .append("session_id",  sessionId)
                         .append("student_id",  studentId)
+                        .append("device_id",   "SYSTEM-" + studentId)
                         .append("subject_code", subjectCode)
                         .append("class_code",   classCode)
                         .append("method",       "SYSTEM")
                         .append("status",       "UNEXCUSED_ABSENT")  // BR-1
                         .append("timestamp",    now);
-                attendanceRepository.insert(absentDoc);
+                try {
+                    attendanceRepository.insert(absentDoc);
+                } catch (RuntimeException ex) {
+                    // Một SV lỗi không được làm hỏng cả vòng chốt phiên.
+                    System.err.println("[AttendanceService] Bỏ qua chèn vắng cho " + studentId + ": " + ex.getMessage());
+                    continue;
+                }
 
                 // Tính tỷ lệ vắng chỉ với UNEXCUSED_ABSENT (BR-1)
                 List<Document> historyDocs = attendanceRepository.findByStudentId(studentId);
@@ -366,11 +376,18 @@ public class AttendanceService {
     private void triggerAbsenceAlertAsync(String studentId, String subjectCode,
                                           int absentCount, int totalPlannedSessions) {
         try {
+            // FIX: tra user theo nhiều field (_id, student_id, username, code, id-số)
+            // vì studentId ở đây là mã lấy từ enrollment, không chắc là "id" hay "_id".
+            java.util.List<org.bson.conversions.Bson> userFilters = new java.util.ArrayList<>();
+            userFilters.add(com.mongodb.client.model.Filters.eq("_id", studentId));
+            userFilters.add(com.mongodb.client.model.Filters.eq("student_id", studentId));
+            userFilters.add(com.mongodb.client.model.Filters.eq("username", studentId));
+            userFilters.add(com.mongodb.client.model.Filters.eq("code", studentId));
+            try {
+                userFilters.add(com.mongodb.client.model.Filters.eq("id", Integer.parseInt(studentId)));
+            } catch (NumberFormatException ignored) {}
             Document userDoc = DatabaseHelper.getInstance().getUsersCollection()
-                    .find(com.mongodb.client.model.Filters.or(
-                            com.mongodb.client.model.Filters.eq("id", studentId),
-                            com.mongodb.client.model.Filters.eq("_id", studentId)
-                    )).first();
+                    .find(com.mongodb.client.model.Filters.or(userFilters)).first();
             if (userDoc == null) {
                 System.err.println("[AttendanceService] Không tìm thấy user: " + studentId);
                 return;

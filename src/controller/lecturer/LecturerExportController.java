@@ -138,6 +138,72 @@ public class LecturerExportController implements Initializable {
         }
     }
 
+    @FXML
+    public void handleExportExcel() {
+        if (studentDataList.isEmpty()) {
+            showAlert("Loi", "Khong co du lieu de xuat.");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Luu file Excel danh sach diem danh");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel Files", "*.xlsx"));
+
+        String classSelection = cbClasses.getValue();
+        String defaultFileName = "Danh_sach_diem_danh";
+        if (classSelection != null) {
+            defaultFileName += "_" + classSelection.split(" - ")[0];
+        }
+        fileChooser.setInitialFileName(defaultFileName + ".xlsx");
+
+        File file = fileChooser.showSaveDialog(cbClasses.getScene().getWindow());
+        if (file != null) {
+            saveDataToExcel(file);
+        }
+    }
+
+    private void saveDataToExcel(File file) {
+        try (org.apache.poi.xssf.usermodel.XSSFWorkbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+            org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("Diem danh");
+
+            // Style tiêu đề (in đậm)
+            org.apache.poi.ss.usermodel.CellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            String[] headers = {"MSSV", "Ho va Ten", "So buoi co mat", "So buoi vang", "Ti le chuyen can (%)"};
+            org.apache.poi.ss.usermodel.Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                org.apache.poi.ss.usermodel.Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 1;
+            for (StudentExportData data : studentDataList) {
+                org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(data.studentId);
+                row.createCell(1).setCellValue(data.studentName);
+                row.createCell(2).setCellValue(data.presentCount);
+                row.createCell(3).setCellValue(data.absentCount);
+                row.createCell(4).setCellValue(Math.round(data.getAttendanceRate() * 10.0) / 10.0);
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(file)) {
+                workbook.write(out);
+            }
+            showAlert("Thanh cong", "Da luu file Excel thanh cong!");
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Loi", "Khong the luu file Excel: " + e.getMessage());
+        }
+    }
+
     private void saveDataToFile(File file) {
         try (PrintWriter writer = new PrintWriter(file, StandardCharsets.UTF_8)) {
             writer.write('\ufeff');

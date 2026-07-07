@@ -5,6 +5,9 @@ import database.DatabaseHelper;
 import javafx.application.Platform;
 import org.bson.Document;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -15,11 +18,9 @@ import jakarta.mail.internet.*;
 
 public class EmailService {
 
-    // ===== CẤU HÌNH GMAIL =====
-    private static final String SMTP_HOST = "smtp.gmail.com";
-    private static final int SMTP_PORT = 587;
-    private static final String SENDER_EMAIL = "vathe809@gmail.com"; // <-- đổi thành Gmail của bạn
-    private static final String SENDER_PASS = "iqjs slke ijvl mwta"; // <-- App Password 16 ký tự
+    // ===== CẤU HÌNH SMTP =====
+    private static final String DEFAULT_SMTP_HOST = "smtp.gmail.com";
+    private static final String DEFAULT_SMTP_PORT = "587";
 
     // ---------------------------------------------------------------------------
     // FIX TC-ABS-003 / TC-ABS-004: Dedicated thread pool cho email
@@ -118,12 +119,14 @@ public class EmailService {
      * Gửi email đồng bộ — chỉ gọi từ background thread, KHÔNG phải JavaFX thread.
      */
     private void sendEmailSync(String toEmail, String subject, String htmlBody) throws Exception {
+        MailConfig config = loadMailConfig();
+
         Properties props = new Properties();
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", SMTP_HOST);
-        props.put("mail.smtp.port", String.valueOf(SMTP_PORT));
-        props.put("mail.smtp.ssl.trust", SMTP_HOST);
+        props.put("mail.smtp.host", config.host);
+        props.put("mail.smtp.port", String.valueOf(config.port));
+        props.put("mail.smtp.ssl.trust", config.host);
         props.put("mail.smtp.connectiontimeout", "15000");
         props.put("mail.smtp.timeout", "15000");
         props.put("mail.smtp.writetimeout", "15000");
@@ -131,17 +134,102 @@ public class EmailService {
         Session session = Session.getInstance(props, new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(SENDER_EMAIL, SENDER_PASS);
+                return new PasswordAuthentication(config.username, config.password);
             }
         });
 
         Message message = new MimeMessage(session);
-        message.setFrom(new InternetAddress(SENDER_EMAIL, "Hệ thống TKB & Điểm danh"));
+        message.setFrom(new InternetAddress(config.fromEmail, "Hệ thống TKB & Điểm danh"));
         message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
         message.setSubject(subject);
         message.setContent(htmlBody, "text/html; charset=UTF-8");
 
         Transport.send(message);
+    }
+
+    private MailConfig loadMailConfig() {
+        String host = setting("ATTENDANCE_SMTP_HOST", DEFAULT_SMTP_HOST);
+        int port = parsePort(setting("ATTENDANCE_SMTP_PORT", DEFAULT_SMTP_PORT));
+        String username = setting("ATTENDANCE_SMTP_USER", "");
+        String password = setting("ATTENDANCE_SMTP_PASSWORD", "");
+        String fromEmail = setting("ATTENDANCE_SMTP_FROM", username);
+
+        if (username.isBlank() || password.isBlank()) {
+            throw new IllegalStateException(
+                    "Thiếu cấu hình SMTP. Cần ATTENDANCE_SMTP_USER và ATTENDANCE_SMTP_PASSWORD.");
+        }
+        if (fromEmail.isBlank()) {
+            fromEmail = username;
+        }
+        return new MailConfig(host, port, username, password, fromEmail);
+    }
+
+    private int parsePort(String rawPort) {
+        try {
+            return Integer.parseInt(rawPort);
+        } catch (Exception e) {
+            return Integer.parseInt(DEFAULT_SMTP_PORT);
+        }
+    }
+
+    private String setting(String key, String fallback) {
+        String value = System.getenv(key);
+        if (value == null || value.isBlank()) {
+            value = System.getProperty(key);
+        }
+        if (value == null || value.isBlank()) {
+            value = readDotEnvValue(key);
+        }
+        return value != null && !value.isBlank() ? value.trim() : fallback;
+    }
+
+    private String readDotEnvValue(String key) {
+        File envFile = new File(".env");
+        if (!envFile.isFile()) {
+            return null;
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(envFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
+                }
+                int separator = trimmed.indexOf('=');
+                if (separator <= 0) {
+                    continue;
+                }
+                String envKey = trimmed.substring(0, separator).trim();
+                if (!key.equals(envKey)) {
+                    continue;
+                }
+                String value = trimmed.substring(separator + 1).trim();
+                if ((value.startsWith("\"") && value.endsWith("\""))
+                        || (value.startsWith("'") && value.endsWith("'"))) {
+                    value = value.substring(1, value.length() - 1);
+                }
+                return value;
+            }
+        } catch (Exception e) {
+            System.err.println("[EmailService] Không đọc được .env: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private static class MailConfig {
+        final String host;
+        final int port;
+        final String username;
+        final String password;
+        final String fromEmail;
+
+        MailConfig(String host, int port, String username, String password, String fromEmail) {
+            this.host = host;
+            this.port = port;
+            this.username = username;
+            this.password = password;
+            this.fromEmail = fromEmail;
+        }
     }
 
     /**
