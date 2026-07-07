@@ -30,6 +30,7 @@ public class ClientHandler implements Runnable {
     // userId nếu authenticated
     private String userId;
     private String authenticatedStudentId;
+    private String authenticatedUsername;
     private String userName;
     private final Set<String> joinedRooms = new HashSet<>();
 
@@ -169,7 +170,8 @@ public class ClientHandler implements Runnable {
 
         // Lưu userId để đăng ký writer cho notifications/broadcast
         this.userId = String.valueOf(user.getId());
-        this.authenticatedStudentId = firstNonBlank(user.getStudentId(), this.userId);
+        this.authenticatedUsername = user.getUsername();
+        this.authenticatedStudentId = firstNonBlank(user.getStudentId(), user.getUsername(), this.userId);
         this.userName = user.getFullName() != null && !user.getFullName().isBlank()
                 ? user.getFullName()
                 : user.getUsername();
@@ -1313,7 +1315,8 @@ public class ClientHandler implements Runnable {
             // Kiem tra thoi gian de set trang thai
             long now = System.currentTimeMillis();
             long startTime = session.getLong("start_time");
-            String attendanceStudentId = firstNonBlank(authenticatedStudentId, userId);
+            String requestedStudentId = req.getPayloadValue("student_id");
+            String attendanceStudentId = firstNonBlank(authenticatedStudentId, authenticatedUsername, requestedStudentId, userId);
             // Cho phép đi muộn trong 1/3 thời gian đầu, hoặc tuỳ logic. Ở đây ta coi nộp thành công là PRESENT.
             // Nếu gửi sau khi quá hạn thì error ở trên đã bắt.
             
@@ -1333,7 +1336,12 @@ public class ClientHandler implements Runnable {
             }
             repo.insert(attendanceDoc);
             
-            return Response.ok("Điểm danh thành công!");
+            Response res = Response.ok("Điểm danh thành công!");
+            res.putPayload("attendance_id", attendanceDoc.getString("_id"));
+            res.putPayload("student_id", attendanceStudentId);
+            res.putPayload("session_id", sessionId);
+            res.putPayload("timestamp", now);
+            return res;
         } catch (IllegalStateException e) {
             String msg = e.getMessage();
             if (msg != null && msg.contains("device_id")) {

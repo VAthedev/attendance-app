@@ -83,6 +83,9 @@ public class AttendanceRepository {
 	}
 
 	public List<Document> findByStudentId(String studentId) {
+		if (studentId == null || studentId.isBlank()) {
+			return new ArrayList<>();
+		}
 		return attendanceCollection.find(studentIdentityFilter(studentId)).into(new ArrayList<>());
 	}
 
@@ -102,7 +105,7 @@ public class AttendanceRepository {
 			filters.add(Filters.eq("user_id", key));
 		}
 		if (filters.isEmpty()) {
-			return Filters.eq("student_id", studentId);
+			return Filters.eq("student_id", "__missing_student_id__");
 		}
 		return filters.size() == 1 ? filters.get(0) : Filters.or(filters);
 	}
@@ -111,8 +114,10 @@ public class AttendanceRepository {
 		java.util.LinkedHashSet<String> keys = new java.util.LinkedHashSet<>();
 		if (studentId != null && !studentId.isBlank()) {
 			keys.add(studentId);
-			Document user = usersCollection.find(Filters.eq("student_id", studentId)).first();
+			Document user = findUserByAnyIdentity(studentId);
 			if (user != null) {
+				addIfPresent(keys, user.get("student_id"));
+				addIfPresent(keys, user.get("username"));
 				Object legacyId = user.get("id");
 				if (legacyId != null) {
 					keys.add(legacyId.toString());
@@ -126,6 +131,23 @@ public class AttendanceRepository {
 		return new ArrayList<>(keys);
 	}
 
+	private Document findUserByAnyIdentity(String value) {
+		List<org.bson.conversions.Bson> filters = new ArrayList<>();
+		filters.add(Filters.eq("_id", value));
+		filters.add(Filters.eq("student_id", value));
+		filters.add(Filters.eq("username", value));
+		try {
+			filters.add(Filters.eq("id", Integer.parseInt(value)));
+		} catch (NumberFormatException ignored) {}
+		return usersCollection.find(Filters.or(filters)).first();
+	}
+
+	private void addIfPresent(java.util.LinkedHashSet<String> keys, Object value) {
+		if (value != null && !value.toString().isBlank()) {
+			keys.add(value.toString());
+		}
+	}
+
 	private void validateReferences(Document doc) {
 		String studentId = doc.getString("student_id");
 		if (studentId != null && !studentId.isBlank()) {
@@ -135,16 +157,7 @@ public class AttendanceRepository {
 
 	private void ensureUserExists(String userId) {
 		try {
-			Document user = usersCollection.find(Filters.eq("_id", userId)).first();
-			if (user == null) {
-				user = usersCollection.find(Filters.eq("student_id", userId)).first();
-			}
-			if (user == null) {
-				try {
-					int idInt = Integer.parseInt(userId);
-					user = usersCollection.find(Filters.eq("id", idInt)).first();
-				} catch (NumberFormatException ignored) {}
-			}
+			Document user = findUserByAnyIdentity(userId);
 			if (user == null) {
 				throw new IllegalArgumentException("Khong tim thay user tham chieu: " + userId);
 			}

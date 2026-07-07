@@ -155,7 +155,8 @@ public class AttendanceGPSController implements Initializable {
 
                         long sTime = session.optLong("startTime", 0L);
                         long eTime = session.optLong("endTime", 0L);
-                        long serverTime = session.optLong("serverTime", System.currentTimeMillis());
+                        long responseServerTime = res.getTimestamp() > 0L ? res.getTimestamp() : System.currentTimeMillis();
+                        long serverTime = session.optLong("serverTime", responseServerTime);
                         serverClockOffsetMillis = serverTime - System.currentTimeMillis();
                         sessionStartMillis = sTime;
                         sessionEndMillis = eTime;
@@ -302,16 +303,10 @@ public class AttendanceGPSController implements Initializable {
     }
 
     private void updateTimeRemainingLabel(long secondsRemaining) {
-        if (secondsRemaining >= 3600) {
-            long hours = secondsRemaining / 3600;
-            long minutes = (secondsRemaining % 3600) / 60;
-            lblTimeRemaining.setText(String.format("Còn lại: %d giờ %d phút", hours, minutes));
-        } else if (secondsRemaining >= 60) {
-            long minutes = secondsRemaining / 60;
-            lblTimeRemaining.setText(String.format("Còn lại: %d phút", minutes));
-        } else {
-            lblTimeRemaining.setText(String.format("Còn lại: %d giây", secondsRemaining));
-        }
+        long hours = secondsRemaining / 3600;
+        long minutes = (secondsRemaining % 3600) / 60;
+        long seconds = secondsRemaining % 60;
+        lblTimeRemaining.setText(String.format("Còn lại: %02d:%02d:%02d", hours, minutes, seconds));
     }
 
     private void updateSessionStatus(long secondsRemaining) {
@@ -582,6 +577,7 @@ public class AttendanceGPSController implements Initializable {
             try {
                 protocol.Request req = new protocol.Request(protocol.RequestType.SUBMIT_ATTENDANCE);
                 req.putPayload("session_id", currentSessionId);
+                req.putPayload("student_id", StudentDashboardController.currentStudentId);
                 req.putPayload("device_id", service.DeviceFingerprintService.getDeviceId());
                 req.putPayload("method", finalMethod);
 
