@@ -191,7 +191,7 @@
                         </VBox>
                         <VBox alignment="CENTER" spacing="4">
                             <Label text="Đếm ngược" style="-fx-font-size: 11px; -fx-text-fill: #6b7a99;"/>
-                            <Label fx:id="lblCountdown" text="50:00" styleClass="countdown-label" style="-fx-font-size: 28px;"/>
+                            <Label fx:id="lblCountdown" text="00:00" styleClass="countdown-label" style="-fx-font-size: 28px;"/>
                         </VBox>
                     </HBox>
                 </VBox>

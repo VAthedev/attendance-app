@@ -302,13 +302,10 @@ public class AttendanceHistoryController implements Initializable {
 
     @FXML
     private void refreshHistory() {
-        cbFilterMonth.setValue("Tất cả");
-        cbFilterSubject.setValue("Tất cả");
-        filteredRecords = new ArrayList<>(allRecords);
-        updateStatistics();
-        refreshTable();
-        setupPagination();
-        boxEmpty.setVisible(filteredRecords.isEmpty());
+        if (cbFilterMonth != null && cbFilterMonth.getItems() != null && !cbFilterMonth.getItems().isEmpty()) {
+            cbFilterMonth.getSelectionModel().selectFirst();
+        }
+        loadAttendanceData();
     }
 
     @FXML

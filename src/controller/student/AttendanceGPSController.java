@@ -13,7 +13,6 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ResourceBundle;
 
 import service.GPSVerifyService;
@@ -83,6 +82,9 @@ public class AttendanceGPSController implements Initializable {
     private Timeline countdownTimeline;
     private LocalDateTime sessionStartTime;
     private LocalDateTime sessionEndTime;
+    private long sessionStartMillis = 0L;
+    private long sessionEndMillis = 0L;
+    private long serverClockOffsetMillis = 0L;
     private long totalDurationSeconds;
     private boolean isWarningShown = false;
     private boolean isCriticalShown = false;
@@ -153,6 +155,10 @@ public class AttendanceGPSController implements Initializable {
 
                         long sTime = session.optLong("startTime", 0L);
                         long eTime = session.optLong("endTime", 0L);
+                        long serverTime = session.optLong("serverTime", System.currentTimeMillis());
+                        serverClockOffsetMillis = serverTime - System.currentTimeMillis();
+                        sessionStartMillis = sTime;
+                        sessionEndMillis = eTime;
 
                         sessionStartTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(sTime), java.time.ZoneId.systemDefault());
                         sessionEndTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(eTime), java.time.ZoneId.systemDefault());
@@ -196,7 +202,11 @@ public class AttendanceGPSController implements Initializable {
         // Lưu thời gian
         sessionStartTime = startTime;
         sessionEndTime = endTime;
-        totalDurationSeconds = ChronoUnit.SECONDS.between(sessionStartTime, sessionEndTime);
+        if (sessionStartMillis <= 0L || sessionEndMillis <= 0L) {
+            sessionStartMillis = sessionStartTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+            sessionEndMillis = sessionEndTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        }
+        totalDurationSeconds = Math.max(1L, (sessionEndMillis - sessionStartMillis) / 1000L);
 
         // Hiển thị thời gian trên UI
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -237,32 +247,29 @@ public class AttendanceGPSController implements Initializable {
     }
 
     private void updateTimer() {
-        LocalDateTime now = LocalDateTime.now();
+        long nowMillis = currentServerMillis();
 
         // Kiểm tra phiên đã kết thúc
-        if (now.isAfter(sessionEndTime)) {
+        if (nowMillis >= sessionEndMillis) {
             handleSessionEnded();
             return;
         }
 
         // Kiểm tra phiên chưa bắt đầu
-        if (now.isBefore(sessionStartTime)) {
-            // FIX: Nếu Server bị lệch giờ (sessionStartTime ở tương lai) nhưng phiên đang OPEN
-            // Ta tự động đồng bộ lại thời gian bắt đầu về hiện tại để cho phép điểm danh
-            long offset = java.time.temporal.ChronoUnit.SECONDS.between(now, sessionStartTime);
-            sessionStartTime = now;
-            sessionEndTime = sessionEndTime.minusSeconds(offset);
+        if (nowMillis < sessionStartMillis) {
+            handleSessionNotStarted();
+            return;
         }
 
         // Tính thời gian còn lại
-        long secondsRemaining = ChronoUnit.SECONDS.between(now, sessionEndTime);
-        long secondsElapsed = ChronoUnit.SECONDS.between(sessionStartTime, now);
+        long secondsRemaining = Math.max(0L, (sessionEndMillis - nowMillis + 999L) / 1000L);
+        long secondsElapsed = Math.max(0L, (nowMillis - sessionStartMillis) / 1000L);
 
         // Cập nhật hiển thị
         updateTimerDisplay(secondsRemaining);
 
         // Cập nhật progress bar
-        double progress = (double) secondsElapsed / totalDurationSeconds;
+        double progress = Math.max(0.0, Math.min(1.0, (double) secondsElapsed / totalDurationSeconds));
         timerProgress.setProgress(progress);
 
         // Cập nhật trạng thái
@@ -403,8 +410,7 @@ public class AttendanceGPSController implements Initializable {
     }
 
     private void handleSessionNotStarted() {
-        LocalDateTime now = LocalDateTime.now();
-        long secondsToStart = ChronoUnit.SECONDS.between(now, sessionStartTime);
+        long secondsToStart = Math.max(0L, (sessionStartMillis - currentServerMillis() + 999L) / 1000L);
 
         javafx.application.Platform.runLater(() -> {
             updateTimerDisplay(secondsToStart);
@@ -509,7 +515,8 @@ public class AttendanceGPSController implements Initializable {
         boolean canCheckin = (boxGPS.isVisible() ? gpsVerified : true)
                 && (boxWiFi.isVisible() ? wifiVerified : true);
 
-        boolean isWithinTime = LocalDateTime.now().isBefore(sessionEndTime);
+        long nowMillis = currentServerMillis();
+        boolean isWithinTime = nowMillis >= sessionStartMillis && nowMillis < sessionEndMillis;
 
         btnCheckin.setDisable(!(canCheckin && isWithinTime && !boxSuccess.isVisible()));
 
@@ -630,6 +637,10 @@ public class AttendanceGPSController implements Initializable {
 
     private void showError(String msg) {
         lblError.setText(msg);
+    }
+
+    private long currentServerMillis() {
+        return System.currentTimeMillis() + serverClockOffsetMillis;
     }
 
     public void cleanup() {

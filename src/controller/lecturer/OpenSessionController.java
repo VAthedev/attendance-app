@@ -43,6 +43,8 @@ public class OpenSessionController implements Initializable {
 
     private Timeline countdownTimer;
     private int remainingSeconds = 0;
+    private long countdownEndMillis = 0L;
+    private long serverClockOffsetMillis = 0L;
     private String currentSessionId = null;
     private ClassInfo selectedClass;
 
@@ -236,7 +238,10 @@ public class OpenSessionController implements Initializable {
             javafx.application.Platform.runLater(() -> {
                 if (res.isOk()) {
                     currentSessionId = res.getDataValue("session_id");
-                    startCountdown(duration);
+                    long serverTime = parseLongPayload(res, "server_time", res.getTimestamp());
+                    long startTime = parseLongPayload(res, "start_time", serverTime);
+                    long endTime = parseLongPayload(res, "end_time", startTime + duration * 60L * 1000L);
+                    startCountdown(duration, endTime, serverTime);
                 } else {
                     showError(res.getMessage());
                     btnOpenSession.setDisable(false);
@@ -245,12 +250,20 @@ public class OpenSessionController implements Initializable {
         });
     }
 
-    private void startCountdown(int minutes) {
-        remainingSeconds = minutes * 60;
+    private void startCountdown(int minutes, long endMillis, long serverTimeMillis) {
+        if (countdownTimer != null) {
+            countdownTimer.stop();
+        }
+
+        countdownEndMillis = endMillis;
+        serverClockOffsetMillis = serverTimeMillis - System.currentTimeMillis();
+        remainingSeconds = calculateRemainingSeconds();
 
         // Update preview to show active session
         lblSessionSubject.setText(selectedClass.subject);
         lblSessionInfo.setText(selectedClass.className + "  •  " + selectedClass.lecturer + "  •  " + minutes + " phút");
+        lblCountdown.setStyle("-fx-font-size: 28px;");
+        updateCountdownDisplay();
 
         // Show active session display and close button
         boxActiveSessionDisplay.setVisible(true);
@@ -260,21 +273,32 @@ public class OpenSessionController implements Initializable {
 
         // Start countdown timer
         countdownTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            remainingSeconds--;
-            int min = remainingSeconds / 60;
-            int sec = remainingSeconds % 60;
-            lblCountdown.setText(String.format("%02d:%02d", min, sec));
+            updateCountdownDisplay();
 
             // Change color when 1 minute left
             if (remainingSeconds == 60) {
                 lblCountdown.setStyle("-fx-font-size: 28px; -fx-text-fill: #f59e0b; -fx-font-weight: bold;");
             }
-            if (remainingSeconds == 0) {
+            if (remainingSeconds <= 0) {
                 stopCountdown("Phiên đã tự động đóng.", true);
             }
         }));
-        countdownTimer.setCycleCount(minutes * 60);
+        countdownTimer.setCycleCount(Timeline.INDEFINITE);
         countdownTimer.play();
+    }
+
+    private void updateCountdownDisplay() {
+        remainingSeconds = calculateRemainingSeconds();
+        int min = remainingSeconds / 60;
+        int sec = remainingSeconds % 60;
+        lblCountdown.setText(String.format("%02d:%02d", min, sec));
+    }
+
+    private int calculateRemainingSeconds() {
+        long currentServerMillis = System.currentTimeMillis() + serverClockOffsetMillis;
+        long millisRemaining = countdownEndMillis - currentServerMillis;
+        if (millisRemaining <= 0) return 0;
+        return (int) ((millisRemaining + 999L) / 1000L);
     }
 
     @FXML
@@ -342,6 +366,15 @@ public class OpenSessionController implements Initializable {
     private void showError(String msg) {
         lblError.setText(msg);
         lblError.getStyleClass().setAll("error-label");
+    }
+
+    private long parseLongPayload(protocol.Response res, String key, long fallback) {
+        try {
+            String value = res.getDataValue(key);
+            return value != null && !value.isBlank() ? Long.parseLong(value) : fallback;
+        } catch (Exception ignored) {
+            return fallback;
+        }
     }
 
     // ===== STEP UPDATE EVENT HANDLERS =====

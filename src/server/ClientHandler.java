@@ -29,6 +29,7 @@ public class ClientHandler implements Runnable {
 
     // userId nếu authenticated
     private String userId;
+    private String authenticatedStudentId;
     private String userName;
     private final Set<String> joinedRooms = new HashSet<>();
 
@@ -168,6 +169,7 @@ public class ClientHandler implements Runnable {
 
         // Lưu userId để đăng ký writer cho notifications/broadcast
         this.userId = String.valueOf(user.getId());
+        this.authenticatedStudentId = firstNonBlank(user.getStudentId(), this.userId);
         this.userName = user.getFullName() != null && !user.getFullName().isBlank()
                 ? user.getFullName()
                 : user.getUsername();
@@ -788,14 +790,19 @@ public class ClientHandler implements Runnable {
             int duration = Integer.parseInt(req.getPayloadValue("duration")); // minutes
             sessionDoc.put("duration", duration);
             
-            long startTime = System.currentTimeMillis();
+            long serverNow = System.currentTimeMillis();
+            Long requestedStartTime = null;
             if (req.getPayload().containsKey("start_time")) {
                 try {
-                    startTime = Long.parseLong(req.getPayloadValue("start_time"));
+                    requestedStartTime = Long.parseLong(req.getPayloadValue("start_time"));
                 } catch (NumberFormatException ignored) {}
             }
+            long startTime = serverNow;
             sessionDoc.put("start_time", startTime);
             sessionDoc.put("end_time", startTime + (duration * 60L * 1000L));
+            if (requestedStartTime != null) {
+                sessionDoc.put("requested_start_time", requestedStartTime);
+            }
             
             sessionDoc.put("room", req.getPayloadValue("room"));
             sessionDoc.put("gps_enabled", Boolean.parseBoolean(req.getPayloadValue("gps_enabled")));
@@ -837,6 +844,9 @@ public class ClientHandler implements Runnable {
             BroadcastManager.getInstance().broadcastAnnouncement("SESSION_OPENED:" + className);
             Response res = Response.ok("Mở phiên điểm danh thành công.");
             res.putPayload("session_id", sessionId);
+            res.putPayload("start_time", startTime);
+            res.putPayload("end_time", startTime + (duration * 60L * 1000L));
+            res.putPayload("server_time", System.currentTimeMillis());
             return res;
         } catch (Exception e) {
             return Response.error("Lỗi khi mở phiên: " + e.getMessage());
@@ -1050,6 +1060,7 @@ public class ClientHandler implements Runnable {
         obj.put("status", safe(session.getString("status")));
         obj.put("startTime", documentLong(session, "start_time"));
         obj.put("endTime", documentLong(session, "end_time"));
+        obj.put("serverTime", System.currentTimeMillis());
         obj.put("gpsEnabled", documentBoolean(session, "gps_enabled"));
         obj.put("wifiEnabled", documentBoolean(session, "wifi_enabled"));
         obj.put("gpsLat", safe(session.getString("gps_lat")));
@@ -1302,12 +1313,14 @@ public class ClientHandler implements Runnable {
             // Kiem tra thoi gian de set trang thai
             long now = System.currentTimeMillis();
             long startTime = session.getLong("start_time");
+            String attendanceStudentId = firstNonBlank(authenticatedStudentId, userId);
             // Cho phép đi muộn trong 1/3 thời gian đầu, hoặc tuỳ logic. Ở đây ta coi nộp thành công là PRESENT.
             // Nếu gửi sau khi quá hạn thì error ở trên đã bắt.
             
             org.bson.Document attendanceDoc = new org.bson.Document();
             attendanceDoc.put("session_id", sessionId);
-            attendanceDoc.put("student_id", userId);
+            attendanceDoc.put("student_id", attendanceStudentId);
+            attendanceDoc.put("user_id", userId);
             attendanceDoc.put("student_name", this.userName);
             attendanceDoc.put("device_id", deviceId);
             attendanceDoc.put("method", method);
@@ -1315,6 +1328,9 @@ public class ClientHandler implements Runnable {
             attendanceDoc.put("timestamp", now);
             
             database.AttendanceRepository repo = new database.AttendanceRepository();
+            if (repo.findBySessionAndStudent(sessionId, attendanceStudentId) != null) {
+                return Response.error("Bạn đã điểm danh trong phiên này rồi.");
+            }
             repo.insert(attendanceDoc);
             
             return Response.ok("Điểm danh thành công!");

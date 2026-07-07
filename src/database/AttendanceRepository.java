@@ -83,16 +83,47 @@ public class AttendanceRepository {
 	}
 
 	public List<Document> findByStudentId(String studentId) {
-		return attendanceCollection.find(Filters.eq("student_id", studentId)).into(new ArrayList<>());
+		return attendanceCollection.find(studentIdentityFilter(studentId)).into(new ArrayList<>());
 	}
 
 	public Document findBySessionAndStudent(String sessionId, String studentId) {
 		return attendanceCollection.find(
 			Filters.and(
 				Filters.eq("session_id", sessionId),
-				Filters.eq("student_id", studentId)
+				studentIdentityFilter(studentId)
 			)
 		).first();
+	}
+
+	private org.bson.conversions.Bson studentIdentityFilter(String studentId) {
+		List<org.bson.conversions.Bson> filters = new ArrayList<>();
+		for (String key : studentLookupKeys(studentId)) {
+			filters.add(Filters.eq("student_id", key));
+			filters.add(Filters.eq("user_id", key));
+		}
+		if (filters.isEmpty()) {
+			return Filters.eq("student_id", studentId);
+		}
+		return filters.size() == 1 ? filters.get(0) : Filters.or(filters);
+	}
+
+	private List<String> studentLookupKeys(String studentId) {
+		java.util.LinkedHashSet<String> keys = new java.util.LinkedHashSet<>();
+		if (studentId != null && !studentId.isBlank()) {
+			keys.add(studentId);
+			Document user = usersCollection.find(Filters.eq("student_id", studentId)).first();
+			if (user != null) {
+				Object legacyId = user.get("id");
+				if (legacyId != null) {
+					keys.add(legacyId.toString());
+				}
+				Object mongoId = user.get("_id");
+				if (mongoId != null) {
+					keys.add(mongoId.toString());
+				}
+			}
+		}
+		return new ArrayList<>(keys);
 	}
 
 	private void validateReferences(Document doc) {
@@ -105,6 +136,9 @@ public class AttendanceRepository {
 	private void ensureUserExists(String userId) {
 		try {
 			Document user = usersCollection.find(Filters.eq("_id", userId)).first();
+			if (user == null) {
+				user = usersCollection.find(Filters.eq("student_id", userId)).first();
+			}
 			if (user == null) {
 				try {
 					int idInt = Integer.parseInt(userId);
